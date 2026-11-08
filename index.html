@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Guide d'Ascension</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;800&display=swap">
+<style>
+/* Layout : une mine la nuit. Un escalier de 11 blocs (les vrais blocs du mod) ouvre la page ; les
+   objets sont montrés dans des cases d'inventaire, comme dans le jeu. Thème sombre assumé. */
+:root {
+  --bg: #13141c;
+  --surface: #1c1e29;
+  --surface-2: #252836;
+  --line: #333748;
+  --fg: #ece9f3;
+  --muted: #a3a1b6;
+  --gold: #f2c77e;
+  --rose: #ff74b8;
+  --slot: #2b2e3c;
+  --slot-dark: #0c0d12;
+  --slot-light: #474b5f;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, monospace;
+  --tier: #f2c77e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.15; }
+h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+h3 { font-size: 1.2rem; font-weight: 500; }
+p { margin: 0; }
+.eyebrow { font: 500 .78rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); max-width: 62ch; }
+a { color: var(--gold); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ---------- textures et cases d'inventaire ---------- */
+.px { image-rendering: pixelated; display: block; width: 32px; height: 32px; }
+.px.big { width: 64px; height: 64px; }
+.px.sm { width: 20px; height: 20px; }
+.slot { display: inline-grid; place-items: center; padding: 6px; background: var(--slot);
+  box-shadow: inset 2px 2px 0 var(--slot-dark), inset -2px -2px 0 var(--slot-light); flex: none; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+
+/* ---------- navigation ---------- */
+nav.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+nav.top .wrap { display: flex; gap: 4px 18px; align-items: center; padding-block: 10px; overflow-x: auto; scrollbar-width: none; }
+nav.top .logo { font: 700 1.1rem var(--font-display); color: var(--gold); margin-right: auto; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+nav.top a { color: var(--muted); text-decoration: none; font-size: .9rem; white-space: nowrap; }
+nav.top a:hover { color: var(--fg); }
+
+/* ---------- héros : l'escalier des paliers ---------- */
+.hero { padding-block: 56px 40px; display: grid; gap: 28px; }
+.hero h1 { font-size: clamp(3rem, 11vw, 6.5rem); letter-spacing: .02em;
+  background: linear-gradient(180deg, var(--gold), var(--rose)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero .lead { font-size: 1.12rem; }
+/* Escalier sur toute la largeur : chaque marche fait exactement K blocs de large et (n° du palier)
+   blocs de haut ; la taille d'un bloc (--b, en pixels entiers) est calculée selon la largeur de
+   l'écran, et la texture est posée bloc par bloc depuis le bas : aucun bloc n'est jamais coupé. */
+.stairs-wrap { display: grid; gap: 14px; }
+.stairs { --b: 30px; --k: 3; display: grid; grid-template-columns: repeat(11, calc(var(--k) * var(--b))); justify-content: space-between;
+  align-items: end; height: calc(11 * var(--b)); }
+.step { appearance: none; border: 0; padding: 0; margin: 0; cursor: pointer; position: relative; width: calc(var(--k) * var(--b));
+  height: calc(var(--n) * var(--b)); background-image: var(--img); background-size: var(--b) var(--b);
+  background-position: left bottom; background-repeat: repeat; image-rendering: pixelated;
+  transition: transform .2s, filter .2s; }
+.step:hover, .step[aria-pressed="true"] { transform: translateY(-6px); filter: brightness(1.18); z-index: 1; }
+.step[aria-pressed="true"] { outline: 2px solid var(--fg); outline-offset: 0; }
+.step span { position: absolute; top: 0; left: 0; right: 0; height: var(--b); display: grid; place-items: center;
+  font: 800 .8rem var(--font-mono); color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+.step.brille { box-shadow: 0 0 26px color-mix(in srgb, var(--rose) 60%, transparent); }
+.stairs-legend { display: flex; justify-content: space-between; gap: 12px; font: .8rem var(--font-mono); color: var(--muted); }
+
+section { padding-block: 56px; border-top: 1px solid var(--line); display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+section > *, .tier-card > *, .celeste > *, .sanct > *, .forge > * { min-width: 0; }
+html, body { overflow-x: hidden; }
+.sec-head { display: grid; gap: 8px; }
+
+/* ---------- paroles d'Ursula ---------- */
+.conte { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start;
+  padding: 12px 16px; background: color-mix(in srgb, var(--rose) 7%, var(--surface-2));
+  border-left: 3px solid color-mix(in srgb, var(--rose) 70%, var(--gold)); }
+.conte img { grid-row: span 2; width: 24px; height: 24px; image-rendering: pixelated; margin-top: 2px; filter: drop-shadow(0 0 6px var(--rose)); }
+.conte q { font-style: italic; quotes: "« " " »"; line-height: 1.6; }
+.conte cite { font: .72rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-style: normal;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.ecouter { appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+  font: 500 .72rem var(--font-mono); letter-spacing: .06em; text-transform: none; color: var(--fg);
+  background: color-mix(in srgb, var(--rose) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--rose) 55%, var(--line)); }
+.ecouter:hover { border-color: var(--rose); }
+.ecouter[aria-pressed="true"] { background: color-mix(in srgb, var(--rose) 35%, var(--surface)); box-shadow: 0 0 12px color-mix(in srgb, var(--rose) 50%, transparent); }
+.conte.fade { animation: apparait .5s ease; }
+@keyframes apparait { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---------- musique ---------- */
+.musique { position: fixed; z-index: 20; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  appearance: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 16px 10px 12px;
+  background: var(--surface-2); color: var(--fg); border: 1px solid color-mix(in srgb, var(--gold) 50%, var(--line));
+  font: 500 .9rem var(--font-body); box-shadow: 0 6px 24px rgba(0,0,0,.45); }
+.musique:hover { border-color: var(--gold); }
+.musique .eq { display: flex; align-items: end; gap: 2px; height: 16px; }
+.musique .eq i { width: 3px; height: 4px; background: var(--gold); }
+.musique.joue .eq i { animation: barre .9s ease-in-out infinite; }
+.musique.joue .eq i:nth-child(2) { animation-delay: .2s; } .musique.joue .eq i:nth-child(3) { animation-delay: .45s; } .musique.joue .eq i:nth-child(4) { animation-delay: .1s; }
+@keyframes barre { 50% { height: 16px; } }
+
+/* ---------- légende ---------- */
+.lore { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 32px; align-items: center; }
+.lore-text { display: grid; gap: 14px; max-width: 64ch; }
+.lore-text p:not(.eyebrow) { font-size: 1.06rem; line-height: 1.75; }
+.lore-text h2 + p::first-letter { font: 700 2.6em/1 var(--font-display); float: left; margin: 4px 10px 0 0; color: var(--gold); }
+.lore-art { display: grid; place-items: center; gap: 10px; position: relative; padding-block: 20px; }
+.lore-art::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; margin-left: -3px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--rose) 70%, transparent) 30%, var(--gold) 70%, transparent); filter: blur(2px); }
+.lore-art .px { width: 72px; height: 72px; position: relative; filter: drop-shadow(0 0 14px var(--rose)); animation: float 3s ease-in-out infinite; }
+.lore-art .alt-top { width: 96px; height: 96px; position: relative; image-rendering: pixelated; box-shadow: 0 0 30px color-mix(in srgb, var(--rose) 60%, transparent); }
+@media (max-width: 760px) { .lore { grid-template-columns: minmax(0, 1fr); } .lore-art { display: none; } }
+
+/* ---------- paliers ---------- */
+.tier-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tier-tabs button { appearance: none; cursor: pointer; border: 1px solid var(--line); background: var(--surface);
+  color: var(--fg); font: 500 .9rem var(--font-body); padding: 4px 12px 4px 6px; display: inline-flex; gap: 8px; align-items: center; }
+.tier-tabs button[aria-selected="true"] { border-color: var(--tier); background: color-mix(in srgb, var(--tier) 16%, var(--surface)); }
+.tier-card { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--tier); display: grid; gap: 22px; padding: 22px; }
+.tier-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.tier-top .name { display: grid; gap: 2px; min-width: 0; }
+.tier-top .name h3 { font-size: 1.9rem; font-weight: 700; }
+.tier-top .tag { margin-left: auto; font: .8rem var(--font-mono); border: 1px solid var(--line); padding: 4px 10px; color: var(--muted); }
+.obtain { background: var(--surface-2); padding: 14px 16px; display: grid; gap: 6px; }
+.gear { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; align-items: start; }
+.piece { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.piece .slot { padding: 10px; }
+.piece .px { width: 48px; height: 48px; }
+.piece span { font-size: .82rem; color: var(--muted); line-height: 1.3; }
+.piece { align-content: start; }
+.piece.outil { appearance: none; border: 1px solid transparent; background: none; color: inherit; font: inherit; cursor: pointer; padding: 4px 2px 6px; }
+.piece.outil:hover { border-color: color-mix(in srgb, var(--rose) 45%, var(--line)); }
+.piece.outil[aria-expanded="true"] { border-color: var(--rose); background: color-mix(in srgb, var(--rose) 8%, transparent); }
+.piece .astuce { font: normal .68rem var(--font-mono); color: var(--rose); letter-spacing: .04em; }
+.piece b { font: 700 1rem var(--font-display); color: var(--fg); display: block; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.stat b { font: 700 1.35rem var(--font-display); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat small { color: var(--muted); font-size: .8rem; }
+.effects { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.effects > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
+.effects .head { display: flex; gap: 10px; align-items: center; }
+.effects ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.effects li { padding-left: 18px; position: relative; color: var(--muted); font-size: .95rem; }
+.effects li::before { content: ""; position: absolute; left: 0; top: .55em; width: 8px; height: 8px; background: var(--line); }
+.effects li.new { color: var(--fg); }
+.effects li.new::before { background: var(--tier); }
+.effects li.none { padding-left: 0; font-style: italic; }
+.effects li.none::before { display: none; }
+.note { font-size: .85rem; color: var(--muted); }
+
+/* ---------- minerais ---------- */
+.ores { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.ore { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); padding: 12px;
+  appearance: none; cursor: pointer; text-align: left; color: var(--fg); font: inherit; width: 100%; }
+.ore:hover { border-color: color-mix(in srgb, var(--rose) 50%, var(--line)); }
+.ore[aria-expanded="true"] { border-color: var(--rose); }
+.ore .conte { grid-column: 1 / -1; }
+.ore .astuce { font: .72rem var(--font-mono); color: var(--rose); letter-spacing: .06em; }
+.ore .icons { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.ore h3 { font-size: 1.05rem; }
+.ore dl { margin: 4px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 10px; font-size: .85rem; }
+.ore dt { color: var(--muted); }
+.ore dd { margin: 0; }
+.recipes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.recipe { background: var(--surface); border: 1px solid var(--line); padding: 16px; display: grid; gap: 12px; align-content: start; }
+.recipe .eq { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font: 700 1.1rem var(--font-display); color: var(--muted); }
+
+/* ---------- forge ---------- */
+.forge { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 20px; }
+.levels { display: grid; gap: 6px; align-content: start; }
+.levels button { appearance: none; cursor: pointer; display: flex; gap: 12px; align-items: center; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); color: var(--fg); padding: 8px 14px; font: inherit; }
+.levels button b { font: 700 1.4rem var(--font-display); width: 24px; color: var(--muted); flex: none; }
+.levels button .row { display: flex; gap: 4px; flex-wrap: wrap; }
+.levels button[aria-pressed="true"] { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 10%, var(--surface)); }
+.levels button[aria-pressed="true"] b { color: var(--gold); }
+.forge-detail { background: var(--surface); border: 1px solid var(--line); padding: 20px; display: grid; gap: 14px; align-content: start; }
+.forge-detail .head { display: flex; gap: 14px; align-items: center; }
+.flame { height: 6px; background: linear-gradient(90deg, #ff7a2a, var(--gold), var(--rose)); width: var(--w); transition: width .4s; }
+.unlocked { display: flex; flex-wrap: wrap; gap: 6px; }
+.anvil { background: var(--surface-2); padding: 12px 14px; font-size: .92rem; }
+
+/* ---------- sanctuaire ---------- */
+.sanct { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.plan { aspect-ratio: 1; max-width: 100%; position: relative; background-image: var(--stone); background-size: calc(100% / 11) calc(100% / 11);
+  image-rendering: pixelated; box-shadow: 0 0 0 6px var(--surface-2); }
+.plan .ped, .plan .alt { appearance: none; border: 0; padding: 0; cursor: pointer; position: absolute; width: calc(100% / 11); height: calc(100% / 11);
+  background-image: var(--img); background-size: 100% 100%; image-rendering: pixelated; transition: box-shadow .4s; }
+.plan .ped.on { box-shadow: 0 0 22px var(--gold); }
+.plan .alt { left: calc(100% * 5 / 11); top: calc(100% * 5 / 11); }
+.plan .alt.on { box-shadow: 0 0 34px var(--rose); }
+.plan .crystal { position: absolute; left: calc(100% * 5 / 11); top: calc(100% * 3.6 / 11); width: calc(100% / 11); height: calc(100% / 11);
+  opacity: 0; transition: opacity .6s; pointer-events: none; image-rendering: pixelated; }
+.plan.awake .crystal { opacity: 1; animation: float 2.4s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-6px) rotate(8deg); } }
+.plan svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.plan svg line { stroke: var(--rose); stroke-width: .8; opacity: 0; transition: opacity .6s; filter: drop-shadow(0 0 1px var(--rose)); }
+.plan.awake svg line { opacity: .95; }
+.plan .cap { position: absolute; left: 6px; bottom: 4px; font: .72rem var(--font-mono); color: #fff; text-shadow: 1px 1px 0 #000; }
+.sanct-side { display: grid; gap: 14px; }
+.offer-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.offer-list li { display: flex; gap: 10px; align-items: center; padding: 6px 12px 6px 6px; background: var(--surface); border: 1px solid var(--line); font-size: .92rem; }
+.offer-list li .slot { padding: 3px; }
+.offer-list li.on { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); background: color-mix(in srgb, var(--gold) 8%, var(--surface)); }
+.status { font: 700 1rem var(--font-display); color: var(--muted); }
+.status.awake { color: var(--rose); }
+.btn { appearance: none; cursor: pointer; font: 500 .9rem var(--font-body); padding: 8px 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); justify-self: start; }
+.btn:hover { border-color: var(--gold); }
+.blocks { display: flex; flex-wrap: wrap; gap: 12px; }
+.blocks figure { margin: 0; display: grid; justify-items: center; gap: 4px; font-size: .78rem; color: var(--muted); text-align: center; width: 76px; }
+
+/* ---------- célestium ---------- */
+.celeste { background:
+  radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--rose) 14%, transparent), transparent 60%),
+  radial-gradient(100% 70% at 0% 100%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 60%),
+  var(--surface); border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--line)); padding: 24px; display: grid; gap: 22px; }
+.piece-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.piece-pick button { appearance: none; border: 0; cursor: pointer; padding: 0; background: none; }
+.piece-pick button .slot { padding: 8px; }
+.piece-pick button[aria-pressed="true"] .slot { box-shadow: inset 2px 2px 0 var(--slot-dark), inset -2px -2px 0 var(--slot-light), 0 0 0 2px var(--rose); }
+.lvl-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; }
+.lvl-num { font: 700 4.5rem/1 var(--font-display); background: linear-gradient(180deg, var(--gold), var(--rose)); -webkit-background-clip: text; background-clip: text; color: transparent; min-width: 2.2ch; text-align: center; font-variant-numeric: tabular-nums; }
+.slider { display: grid; gap: 8px; }
+input[type=range] { width: 100%; accent-color: var(--rose); }
+.ticks { display: grid; grid-template-columns: repeat(12, 1fr); font: .7rem var(--font-mono); color: var(--muted); text-align: center; }
+.ticks span.hit { color: var(--gold); }
+.fusion { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: .95rem; }
+.fusion .hands { display: flex; align-items: center; gap: 8px; font: 700 1.2rem var(--font-display); color: var(--muted); }
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 150px minmax(0, 1fr) 70px; gap: 12px; align-items: center; font-size: .9rem; }
+.bar .track { height: 10px; background: var(--surface-2); }
+.bar .fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--rose)); transition: width .3s; }
+.bar b { font: 500 .9rem var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.powers { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.power { border: 1px solid var(--line); padding: 12px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-content: start; opacity: .4; transition: opacity .3s, border-color .3s; }
+.power .slot { grid-row: span 3; align-self: start; padding: 4px; }
+.power.on { opacity: 1; border-color: color-mix(in srgb, var(--rose) 55%, var(--line)); }
+.power small { font: .72rem var(--font-mono); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.power b { font-weight: 700; }
+.power p { font-size: .88rem; color: var(--muted); }
+
+/* ---------- commandes ---------- */
+.cmds { display: grid; gap: 8px; }
+.cmd { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); padding: 8px; }
+.cmd .slot { grid-row: span 2; padding: 4px; }
+.cmd code { font: .85rem var(--font-mono); overflow-x: auto; white-space: nowrap; color: var(--gold); }
+.cmd .lbl { font-size: .82rem; color: var(--muted); }
+.cmd .btn { grid-row: span 2; grid-column: 3; }
+footer { padding-block: 32px 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+
+/* Chiffres : la police pixel rend mal les 2, 5 et 8 ; tous les nombres passent en police à chasse fixe. */
+.num, .stat b, .piece b, .levels button b, .lvl-num, .step span {
+  font-family: var(--font-mono) !important; font-weight: 800 !important; letter-spacing: 0; }
+.lvl-num { font-size: 4rem; }
+
+/* ---------- grille de fabrication ---------- */
+.craft-card { background: var(--surface); border: 1px solid var(--line); padding: 20px; display: grid; gap: 14px; }
+.craft { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, auto); gap: 3px; background: var(--slot-dark); padding: 3px; }
+.grid3 .slot { padding: 8px; }
+.grid3 .slot .px { width: 36px; height: 36px; }
+.arrow { font: 800 2rem var(--font-mono); color: var(--muted); }
+.result .slot { padding: 12px; }
+.result .px { width: 56px; height: 56px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 760px) {
+  section { padding-block: 40px; }
+  .grid3 .slot .px { width: 28px; height: 28px; }
+  .chip { white-space: normal; }
+  .tier-card, .celeste, .craft-card, .forge-detail { padding: 14px; }
+  .tier-top .name h3 { font-size: 1.5rem; }
+  .gear { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .piece .px { width: 40px; height: 40px; }
+  .ore { grid-template-columns: minmax(0, 1fr); }
+  .ore .icons { justify-content: flex-start; }
+  .cmd { grid-template-columns: auto minmax(0, 1fr); }
+  .cmd .btn { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
+  .musique { padding: 8px 12px 8px 10px; font-size: .82rem; }
+  .lore-text p:not(.eyebrow) { font-size: 1rem; }
+  .recipe .eq .slot .px { width: 26px; height: 26px; }
+  .forge, .sanct { grid-template-columns: minmax(0, 1fr); }
+  .step span { font-size: .62rem; }
+  .bar { grid-template-columns: 110px minmax(0, 1fr) 56px; }
+  .lvl-row { grid-template-columns: minmax(0, 1fr); }
+  .lvl-num { text-align: left; }
+  .ores { grid-template-columns: minmax(0, 1fr); }
+  .tier-top .tag { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+
+<nav class="top"><div class="wrap">
+  <span class="logo" id="logo">Ascension</span>
+  <a href="#legende">Légende</a>
+  <a href="#paliers">Paliers</a>
+  <a href="#minerais">Minerais</a>
+  <a href="#forge">Forge</a>
+  <a href="#sanctuaire">Sanctuaire</a>
+  <a href="#celestium">Célestium</a>
+  <a href="#commandes">Commandes</a>
+</div></nav>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Mod Minecraft · NeoForge 1.21.1</p>
+    <h1>Ascension</h1>
+    <p class="lead">Onze métaux, du plus commun au plus rare. Chacun ouvre la voie au suivant, de la bauxite des grottes jusqu'au Célestium, le métal doré qui garde la lumière du ciel.</p>
+  </header>
+
+  <section id="legende">
+    <div class="lore">
+      <div class="lore-text">
+        <p class="eyebrow">Ce que racontent les anciens sanctuaires</p>
+        <h2>La légende</h2>
+        <p>Bien avant les villages, un peuple dont on a oublié le nom cherchait à rejoindre le ciel. Il ne bâtissait pas de tours : il travaillait le métal. Chaque minerai tiré de la roche le rapprochait d'un cran, de la bauxite rougeâtre des grottes jusqu'à la charoïte violette, forgée à partir de tous les autres.</p>
+        <p>L'ascensium, ce minerai turquoise qui dort près du diamant, servait de monnaie à ses forgerons. C'est encore lui qui paie chaque niveau de la forge.</p>
+        <p>Au bout de la route, il y avait le Célestium, doré et veiné de rose, qui brille encore au cœur de la nuit. Pour le faire grandir, il fallait le fondre avec tout ce qui l'avait précédé, une pièce après l'autre, sans en sauter aucune.</p>
+        <p>Le peuple a disparu. Restent ses sanctuaires, posés sur les îles de Champignons, là où aucun monstre ne vient troubler le travail. Leurs socles attendent toujours des offrandes venues des quatre coins du monde : une étoile prise au Wither, un cœur pris à l'océan, un bloc de charoïte et de l'ascensium infusé. Un fragment d'écho, rapporté des profondeurs, réveille l'autel. Un rayon remonte alors vers le ciel, et la route est de nouveau ouverte.</p>
+        <p>Ces histoires, on les tient d'Ursula, la dernière gardienne des sanctuaires. Elle n'a jamais dit son âge. Elle raconte à qui veut l'écouter, et ses souvenirs t'attendent tout au long de ce guide : clique sur un minerai, une marche, un niveau de forge, et elle aura quelque chose à dire.</p>
+      </div>
+      <div class="lore-art" aria-hidden="true" id="loreart"></div>
+    </div>
+  </section>
+
+  <section id="paliers">
+    <div class="sec-head">
+      <p class="eyebrow">Les 11 paliers</p>
+      <h2>Monter marche par marche</h2>
+      <p class="lead">Chaque palier donne une armure, une épée et une pioche. Les effets s'additionnent : un palier garde tous ceux d'avant. Les effets d'armure ne marchent qu'avec le set complet, et s'arrêtent dès qu'on enlève une pièce.</p>
+    </div>
+    <div class="stairs-wrap">
+      <div class="stairs" id="stairs" role="group" aria-label="Choisir un palier"></div>
+      <div class="stairs-legend"><span>palier 1 · bauxite</span><span>clique sur une marche</span><span>palier 11 · célestium</span></div>
+    </div>
+    <div class="tier-tabs" id="tabs" role="tablist" aria-label="Paliers"></div>
+    <article class="tier-card" id="tier" aria-live="polite"></article>
+  </section>
+
+  <section id="minerais">
+    <div class="sec-head">
+      <p class="eyebrow">Sous terre, dans le Nether et l'End</p>
+      <h2>Où creuser</h2>
+      <p class="lead">Les pioches de Minecraft (fer, diamant, netherite) ne minent que la bauxite, la cassitérite et l'ascensium. Tout le reste demande une pioche du mod, du palier indiqué ou plus. Chaque minerai prend l'aspect de la roche où il pousse.</p>
+    </div>
+    <div class="ores" id="ores"></div>
+    <h3>Trois lingots à reconstituer</h3>
+    <p class="lead">Le cinabre, l'ilménite et le platine ne donnent qu'un lingot brisé, fendu en son milieu. On le répare à la forge avec un exemplaire de chacun de ses deux minerais secondaires.</p>
+    <div class="recipes" id="recipes"></div>
+    <p class="note">La fulgurite ne pousse pas toute seule : quand la foudre tombe sur du sable dans un désert ou une mesa, il a une chance de se changer en fulgurite. Un paratonnerre posé sur le sable aide, et l'enchantement de trident Foudre fait tomber l'éclair sur un paratonnerre même sans orage.</p>
+  </section>
+
+  <section id="forge">
+    <div class="sec-head">
+      <p class="eyebrow">Forge et Enclume d'Ascension</p>
+      <h2>Une table, deux usages</h2>
+      <p class="lead">La forge combine les lingots, un de chaque minerai demandé. L'enclume fait passer une pièce au palier suivant en gardant ses enchantements. Les deux partagent les mêmes niveaux, qu'on monte en payant de l'ascensium.</p>
+    </div>
+    <div class="craft-card" id="craft"></div>
+    <div class="forge">
+      <div class="levels" id="levels" role="group" aria-label="Niveaux de la forge"></div>
+      <div class="forge-detail" id="forge-detail" aria-live="polite"></div>
+    </div>
+    <div class="recipes" id="extras"></div>
+  </section>
+
+  <section id="sanctuaire">
+    <div class="sec-head">
+      <p class="eyebrow">Structure naturelle · îles de Champignons</p>
+      <h2>Le Sanctuaire d'Ascension</h2>
+      <p class="lead">Une plateforme de 11 × 11 blocs avec un autel au centre et quatre colonnes surmontées d'un socle. Presque chaque île de Champignons en abrite un. La boussole d'Ascension pointe vers le plus proche. Deux coffres sont cachés sous le sol.</p>
+    </div>
+    <div class="sanct">
+      <div class="plan" id="plan" aria-label="Plan du sanctuaire vu de dessus">
+        <svg viewBox="0 0 110 110" aria-hidden="true">
+          <line x1="15" y1="15" x2="55" y2="45"></line><line x1="95" y1="15" x2="55" y2="45"></line>
+          <line x1="15" y1="95" x2="55" y2="45"></line><line x1="95" y1="95" x2="55" y2="45"></line>
+        </svg>
+        <img class="crystal" id="crystal" alt="">
+        <span class="cap">vu de dessus · 11 × 11 blocs</span>
+      </div>
+      <div class="sanct-side">
+        <p class="status" id="sstatus">Endormi · 0 / 4 socles</p>
+        <div id="sconte"></div>
+        <p class="note">Clique sur les socles pour déposer les offrandes, puis sur l'autel.</p>
+        <ul class="offer-list" id="offers"></ul>
+        <button class="btn" id="reset" type="button">Recommencer</button>
+        <div class="blocks" id="sblocks"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="celestium">
+    <div class="sec-head">
+      <p class="eyebrow">Palier 11 · niveaux 1 à 12</p>
+      <h2>Le Célestium</h2>
+      <p class="lead">Une pièce en Célestium sort de la forge au niveau 1. À l'autel éveillé, on la tient dans la main droite et la pièce du même type du palier suivant dans la main gauche, puis clic droit. Choisis une pièce et fais glisser le niveau.</p>
+    </div>
+    <div class="celeste">
+      <div class="piece-pick" id="cpick" role="group" aria-label="Pièce en Célestium"></div>
+      <div class="lvl-row">
+        <div class="lvl-num" id="lvlnum">1</div>
+        <div class="slider">
+          <label for="lvl" class="eyebrow">Niveau de la pièce</label>
+          <input type="range" id="lvl" min="1" max="12" value="5">
+          <div class="ticks" id="ticks"></div>
+        </div>
+      </div>
+      <div class="fusion" id="fusion"></div>
+      <div class="bars" id="bars"></div>
+      <div id="cconte"></div>
+      <div class="powers" id="powers"></div>
+      <p class="note">Pour l'armure, c'est la pièce la plus faible des quatre qui donne le niveau du set. Le Célestium est incassable, épique et ne brûle pas. La nuit, les lignes roses de l'armure brillent et le set complet donne la vision nocturne.</p>
+    </div>
+  </section>
+
+  <section id="commandes">
+    <div class="sec-head">
+      <p class="eyebrow">Pour tester en créatif</p>
+      <h2>Commandes utiles</h2>
+    </div>
+    <div class="cmds" id="cmds"></div>
+  </section>
+
+  <button class="musique" id="musique" type="button" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="mlabel">Écouter la légende</span></button>
+  <audio id="audio" src="legende.wav" loop preload="none"></audio>
+  <footer>Musique « La Légende d'Ascension », composée et générée pour ce guide. Guide du mod Ascension, usage personnel. Textures du mod (en partie recolorées depuis d'autres mods, à ne pas diffuser). Valeurs du cahier des charges au 08/11/2026.</footer>
+</div>
+
+<script>
+const TEX = {"b:ascension_forge_side": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABc0lEQVR42qWSu0oDQRSG5xlSphAhjZAyb5JCLOwVhGSTTXazu8laaCE2YiVCQLDRysJSLNQHsPRJ7H/PN3jWoCBeim8YzuU/l5lwp1dtvTxH/nIPre1d/YeQ57kWi4UGg4GSJNF8PleWZaqqSv3+ZrzPZjNNp1PVdS3iPRZ/KMtSo9EoOrjjIAAImEwmGg6HsQh+QLwR8AoYEOFOsncwHo9jdYpgR4wuEYwCVMBAe9xJIJlKBHhFfAhQ0MeIAmmaysdAHQEXJYBAulod0YkCHKtsrK99y+f4OALKPhNBeuhJT8ajcWXcG9e96CPWX4mc+IzMzyiNwG1XWho3xrlxZlx2o4/WXYAxAxtmdmgETjvSsXFhHBlL46QTfeyDguyKnMCSaKUoig+Bqi0dGPtGbRwaRbvpwD8cOcE3j3IjkLak/J3E2DN2Ws0O/CdC4OAJmesnr0AyeyMvLhGD/zQEMCKGnRYJ9r+Bn2XTrf/GL//gt7wBG/JEKAY+G8cAAAAASUVORK5CYII=", "b:ascensium_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA6ElEQVR42nWTvQ1CMQyEPQPTUTBABnh92jcBwzAEJRNQUlC8EinoIl30xYTCSuSfs++cxLZtrdY6mXyyfd/HvZTSY/IxL3Rh0EU5kTm6+wyini6lnR/30ZWF/2xMoOJbO9qrfTqIJ1HMxiZuGuSrwPX97EkenWO7yQRAdJ8uNDi1EAjzI3OkeAR1zID2Bzvmu/kSmJvqazS//B4oqjXJU+g+JiCqg+ruYk4wAVA4ipdHJQCphpPI1yLxMa3ewtBADnEV5/wfMncVWpdpjeZLfqtVetofEdmFHybvnv9kvAMWZzPQ6tvL/wUD2HczYgisWwAAAABJRU5ErkJggg==", "b:basalt_cendrium_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABEUlEQVR42o2TsQoCMRBEg6LoIadYqrWFdmchKLYiWPgDh2Brq/8ffYEJY7SwWDbZ7MxuZpNwOV/ifNnE3f4UWWNt22Yv8zjWbA7JBxYQ4BVU4iJ0460aJ+/x2Xu/7vRT0VCCBcSuwzp572DV6cVjr8q5iQBTgIokYL8q30eTj+sGNhCQ/Kincdsd5A48kfXzfa69dEsEuitgvAAiUAfaS7dEoPt7VQAiFrkToAPF8hQkIF5AErwjSDl3EXMHPn+BHSgD/CViOT6BHShDRHWp2IcGAGc2uvJFSn2PZQKBS5BPAtPIuQ64oPbLSp5UPm+uCXEicA3KKfinkerSR+8kE3irLqKTCOS/Mrgw/3zl8nW+APa3tUpe9AStAAAAAElFTkSuQmCC", "b:bauxite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiUlEQVR42mNos5T5n6YpDMYgNj4MU4esngHEOJlrj4H3JVvA8e4Es/9bIg0xMEgv2ABsksTgEAX+/wyOEtz/F3ip48QrArTgeIqTEgoG6cXpBXRv4HQBzbyA7HRszsfqBWQn43M6fbxATEyQFAvYvEN7LxCKCZxeIDYmqOMF9CyKjEEKQBiZjY4BuD0TVTiIAygAAAAASUVORK5CYII=", "b:bauxite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+UlEQVR42n2TvRHCMAyFNQYTZAgKJklF5QHSp6FIQcUoVBmCmooR2MHc893nexGBQmdbkfV+5MQ0TXVZlhbaz/PcwnPUkKdO+9ChlFLPw6HeTkP/qJxWzjQCgHNrwOV1PNb3674pUiOF1wkZgNBByedlbA0oyEgZBIlBIQVa82UHeazXXiMWARo0Xb97gE8KJDQGTtd1++V/EdB0JDX1qeSRkutT+GWYzNKaGfo+9ijjtkzDWGfiUsMT7ocuZccBguFXA7rSzJnRgJFKnhoFxdk01+2vUYGs/pB04IVhGmj+RnwS5LoEXcyaM7pL3ZjolPf+A5+U+6LaD2m5WsV3LBGBAAAAAElFTkSuQmCC", "b:cassiterite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiUlEQVR42mOwVxf7ry/DD8YgNj4MU4esngHEyPXQwcApTupwnGSv9j/GWhkDg/SCDcAmSQxWE+f5zyAnxPnf30gWJw4xlYdjd11JFAzSi9ML6N7A6QKaeQHZ6dicj9ULyE7G53T6eIGYmCApFrB5h/ZeIBQTOL1AbExQxwvoWRQZgxSAMDIbHQMA/3CgDrhw2TAAAAAASUVORK5CYII=", "b:cassiterite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+ElEQVR42m2TsQ0CMQxFMwMDIGZANwUFFRNQXUlxokK6NhUjMAQFo7BO0Lf0on8mheWcY39///jKuq6t1ho2z3P3y7I03Y1ieFnRh2za79plOkSyvvEUyADhLCtKoPh+Prbv+7HpKqMbeX8MFHzdTgGgM5eM5wxpAsuS0eWh6ixo8nleI6cDuEAuFAK6VyHF2AYAEAAAU47HvFFx1SnW2QVzABc4AHIH10NiZVFhCkjxRcJQW6IhLHfOoj8jyAQZAcUd3BnGK+RlGemBccd4Aioj0Vx9Z0acseIZocSGjUQb/UibTWSdmTk/2WgX+r+QNfClygWjJfsB8DJLi+fPWkkAAAAASUVORK5CYII=", "b:celestial_altar_side": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA8UlEQVR42mWTsRECMQwEVQEZRZATEtIEMyRfCgWQ0QA1QEYJBFRA+tknnxKYOc+s5ywHN35Lp9PJfkdZn+U334pWvpf31FaH56gJir6PYzkfNhWX07bhdd21lW9xEQmKBRE+93399lVQDg78JuDdKMINII4LxToBOgmaUwRcIKC4N9A+FJAASYqxmUXgUBPMRSGdfZ/HGgQYIdt24BBBbiP8ZAnSwa+Uf4FmwwgIQPDb4apdjJpOgJ8DEns6530nwEEi5LaVU4zzITaMQJIOCEOm0GNVgIfkROy6bZp5LPy1oexjOVwAwXDbuWN+0jkv/AHPaLTRSOYtfgAAAABJRU5ErkJggg==", "b:celestial_altar_top": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAvElEQVR42oVTwRGDMAxjgu7QOcooXaXXfXgzC9/u0Be/cOJOnCw74aEEG1tRYntq/7Xtv2/DTsB2X88/YVk+zwvv+XGC3+5XXyCoThvZyIEvEFDitryGO2Kh5CTAAoMECAKhJqlNpCswmAkKJQGCAhrYNdBJlCwpUIJRMpUGAjXukv0KgUAr0HsDxgUCfRCeUL2F/ktl1D7w8nlJyzJqH7iSKjldodfK2r5VK6dh0oHRgaqGKxD4qY6eCuAAXSHkkAKaGXcAAAAASUVORK5CYII=", "b:celestial_altar_top_lit": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAv0lEQVR42oVTsQ3DMAzLOTmmc77IDf2iY5d+0qFjLsgH/aCLAwZgQFGyO9COFImmLWlq7739Xp+GnYDtvp5/wrLd7hce83KC3+5XXyCoThvZyIEvEFDid30Od8RCyUmABQYJEARCTVKbSFdgMBMUSgIEBTSwa6CTKFlSoASjZCoNBGr8S/YrBAKtQO8NGBcI9EF4QvUW+i+VUfvAy+clLcuofeBKquR0hV4ra/tWrZyGSQdGB6oarkDgpzp6KoADC0ANnXjTOIsAAAAASUVORK5CYII=", "b:celestial_pedestal_side": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAyUlEQVR42n2SsQ3DQAwDtYQXyB4eJBkllQcKXGUHj5DCI7hLk9KBHqBwL+hdEDDkF0lRsuU+nb/92UG1Y3sEvPZ5zQ18Z9XjdbnFY2Ek1AjUqMdOIPh/gc1yZbRG6EHVSKdBoIasXrmh024EL5zfd0NWZRb8NqrQ7kiVmTSCSlEETJuzq+59VgXEtWm0LCBYDipvQPVqtAhRI1THkoNU0CIzNmXV0Rq7S6zmoyM5rIIOAibMU84ruzxlNY8OKq+yI7i6AdZ4kVr1H6KnvFFWP50FAAAAAElFTkSuQmCC", "b:celestial_pedestal_top": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAx0lEQVR42p2TuRHCQAxF1QQN0BWUQuSKiOjBRbgEMhJCM18zz/NXaAkI5D0kP50by+W0v7dbyv565Hpfzrl/rtc8a9Wd2+lO/4Y+GEh0RnSPIYLdF0CryE7He9X9BLjSYVUHaAAQnjzXCGoq1Co8V4oEoIbsNkMKM3FAV+QEQPM2sgdQvaOThBv8I9MUKCYpzGzCezybRvYAkQHQTVkFeCGPLnjffebrIBGV2x4AHxbS6Aap6trH5AVzQNUBGiYRL15AL1j3nD8MkLTVwKko1wAAAABJRU5ErkJggg==", "b:celestial_pedestal_top_lit": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAyklEQVR42p2TyQ3CQAxFXQ5d0EUKoQKqQKKH1AASddAER05B39KL/hgPBw7OLHae14nLYdne13vK9njmejuecv86r3nWqju3053+DX0wkOiM6B5DBLsvgFaRnY73qvsJcKXDqg7QACA8ea4R1FSoVXiuFAlADdlthhRm4oCuyAmA5m1kD6B6RycJN/hHpilQTFKY2YT3eDaN7AEiA6CbsgrwQu5d8L77zNdBIiq33QE+LKTRDVLVtY/JC+aAqgM0TCJevIBesO45fwC3LclsK5+X2AAAAABJRU5ErkJggg==", "b:celestial_pillar": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlElEQVR42pVSQRGAMAyrDGTgCQMIQQE6EIEBjICAcjy6y0q6bq9etjVtksm2TPpcq2LV+9Bzn0v9zg3bOzsX34gPDCMh4ooAJ7INGFEhYI3ZJlaFNbLJXvuPgJmYYUoQecHMLgSRST1YWM4t04ZjZPfVR4pyZ9qxsZLQiimKMyUYMjFatcdUyT6Kv/fSpKU98gY3fQGV8OfH+Lp7HAAAAABJRU5ErkJggg==", "b:celestial_stone": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA0UlEQVR42n2TsQ7CMBBD/dl8AD/CH8DONzBVjGwsCOYidQi6SA+5btThlKYX+3y+RMvn0ebn1F63a1/vl9P/u9baV9S59n33lXyFOEjU4fPxsNoXsAIQuQ0B4ApXQmUIXLFcqoOdoMAeXlTeZ1ZOMHswnYCPBLsvKd/Vyg1KM12JE3sxIcsPpgdJ7LnVFFADIQe5Az4+fJH/JEFLXg3zsoiy15HTmduMcXRBXOqInAJKsPc8mlAardHjyeu7d9WVxkCAy3vgTpAPJXt3M5Htk/kBa+N+wca/tRQAAAAASUVORK5CYII=", "b:celestium_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACPUlEQVR42pWT2U8TYRTFvz/ImJgYE+ObiT5pjCZGEozG+EDEpPtMp3RhNtNEidoooNYFlah1BxdckYgoKipF9oAokuJ0uohAsaVy/L7RaaT2pe/33PO7595L5l45kLzBIRkRMNNuxffHFqTbbEjfcSB1y4XkNR6JywL0i15MyArGAzJGPTKGOAmxIyoIEy/pTVjSwvgVa0B+KoT8ZB1yIx5kB934+ZFH5p0Lc10OzD6348czG2aeUKMHVvTtl2gD6rw4JlKBF7khAdl+KoryWHjPIfPWhfluZ0lx+q4dHRUCyGdVQaaHFr6mhS9pYSct7KCFT2nhI8sfwUM61j079HN+xMO10BolfDumIrKxGkQ/7ytg5yeCWByXkRv1IzcsGOjzb2hjmtO/zqnbTiSv82jb6gCJnwmUhW2KE1cEtG62ggzz8n/Y6fu2AnaqxWlsycSOHVbx9aCCLwcUhNftAdHqlQL2Qi+3DHv2hb2kc6K5BnqTD5ENNIPpo2pZ2KY4fjqA5vVVINF9YgE71epE6iY9qqtuJC55oF/wIn42ABY0y0o7KeKTJGPMJ2PELaNudQXIZFBBdoCG2EdD/MAtW2nxVZrO2gmax/G/GbDzLAfbFLPRG9buAunaWVMSO35KLGBr9TKmQ6qBPeiU0G+REK0W4V+xBYQ9RvElFj9TsfPUIQVsdCMD9lXlYJtiNnpw1XaQAZtkfFVvlYievbXo3u1DZ6UH7Tvcxp7Zqlo2WYzA2MyhNZWGMxPLK7fhNxiC/vHTCMYJAAAAAElFTkSuQmCC", "b:charoite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACPklEQVR42pWT50+TYRTFn79BxJWiUFpGAaltEWsBEVHEGcQFohUtkAIWHJXVSlGkDKHIFJVUGSoBFRVwxlHFhYgaY4wx/ivH5774vqHYL/10P52c3z33XOY0eFC26i6s6hHUxD9F9epHsOsmUKV9gArNKMrUd2CNHcbJlUMwKTtxRNGOw6GtOCRvgTn8KhiJB/b/Qd/e33Bn/kJvxk9c2fkD7WkzuLhxGq4NU2ha9w7n177EOf3zfyaPYY+bQHZwAxg5d235io7NM2jbNI3W1Ck0r/8giBoSJ+E0vPYprtKOYZfMDmZSdqEx6S3qE96gzvAKtfoXOLvmGRzxT3Am7iEcXEDTphtDafQNWKIGUKy6jsIIN9KXlIIdj7kpYfds/47urd/Qmf6Fr/B5DoXHy7lCc0/IbceycrCS6EG/sEWxNXYE25ZawYxy13/YNt24hF2puY9yLhCxKfmCsB7kKbuRusgMVhR5TcL2pvAIFL6c6aS0upCBOaLXL2xRXMLDTFtsAcsKdkrYlVrCHcVp9W2c4uU5EXOLJz8oTYuqH0cVHchVtMEY6kLSwlyw/LBLvDCf0JLyEReS33uddLaV41IrRedjqj4URbpnM6B6+oMtimn1lMB8sN1BDp/Ylqh+CbuYB13IBYR9UN6MAyGNvMb10C/IBqPHmN/Eudj0TPOdC8IvI4+vLmRAX+UPtiim1RMDjGA5IU3CV2WtqMO+5bXYE1SDTFk1MmQ24c50KmocBUY7JweaBGcSGwJy8BeKjk5DHcF07gAAAABJRU5ErkJggg==", "b:cinnabar_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACK0lEQVR42pWTa2jNYRzHn9rY2dk5Z+d+v+6c45wmQ5OpWbTIC/FiihdDShFyi9IW8UJeuCWUWGsuuURCG5vc5ZJLpIS5i4gIkZZWX9/ff5451nlzXnx6+p/z/J7f5/d7fo96Go3ijN2LUzYP7vlCuOUN4po7gEsuP846fOgo9+IE/ztqcaPZ5sRKstzqwBKyyeqCkuDeGRPwu2EceqbU4tekGvysr8bnEUPwcVga7ytTeJNO4Ek4goeBMO77Q7jNJNc9ASyw2KEk87dRWXwZmcGnqjQ+DE3hXTZpBL2siONZLJo3+DINZ5baoFZT6VUyjufxGLojUTwKhvEgEMJdXxA3ufEO1xtcrzDgAMtoJbuovo1MLbFAHeIPWvvH2OH4XlOJr9UZo4TXqQReJGKQPuVmPsfenGbp001WqL08oBBtHXySpU+TA5aymwO1r7r9/drnnT50MkBrbyTryRqWPnGQGWoHP7T220zFf9qPQ5G8mY/R+iAxerCFBxSirYPbyOTBZVDzy+z92heo28WN7Rye41YPjnDTfnKY7CN7mGwV1VeQZSy9rrgUah0/+gYm+beEf1eqp/Kis28qdebdPGg7MXog41mItg7eTOrlgNlmW17tFm7Q2jvJViLai8lCjrCUPrqoBEoeRq62XGmutjymgZk3kLU0N3ogr6oQbR3cRGqLTVCLLA7jVc2j0lxzOeaQWXwkjUTuWa6qgas0TGoez6ySWYLHFJnwBwKe2HvT1JQ8AAAAAElFTkSuQmCC", "b:cinnabar_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABPElEQVR42nWTMUqDQRCFFy2Mjdr8aYJCutQ5gGBAW2MlVlZewMI2KOQQgnfwPB5FEFa+gW95CBbzz/6z897MvN1td9PU75fLjt8uFv1ptSr/vF6X8Y9dzedjbRxc4+MGa8Ak428Pj/vPw3V5CkhyczDr+9lZxZpsyQoA+95elpcYwOvRaf86vxiYtt9sepJQkQQMsHGMyv3lcYyJrw4gIbm/7/rnyTQ6II5J0j/ehj5DA9pyVsB4Se1OgFVz5CJgYVWEctMYpGpAHB0oVhrw8RhTfRLsiD1JFdEOW7ZGkmCB2TJgRDReHfwHtpucFxFZQ+DFq4skGCBH5c1T8RTTi+b+GCHBCpYkxI1RjHGKIOfJd5BJEuaYEo4R8saZ5JyYb4ZOHakIUijn9dzzcWWX+UqbFZIk/yH5eyJJ8AsQKrhaCCiPoQAAAABJRU5ErkJggg==", "b:cobaltite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACV0lEQVR42pWTaUgUYRzG53OWFO7OsTO7s7u2rma7mta80+aVW6upHZJFWlJpaLdsF1YSUhZGSvddEB2IRVFRUXQTEURFJ51UFB0UEVH09el9Z5lhw/2y39+H/+85Xs5T+whCSS/4gqNQJt6CXHUNjvKLkMaehVh6EnxxD+yjDsOmH4BHWwev1g738DaoeSuhkC5wTFzR9ReRzj8o7fiNovZfCLX9RHDxZ2TP/4Cs5nfwzXoBdeoDuCbfhTLpNj1yHY5xl6AEl4Jjl3OXfEOw5QuGLviIIXPfI3POG2TMfonB9c/gqXucUCxFzoHPaATn1jrgm/kc3ulP4J72EK6ae3BW34Ey4SbkyitQxt+Ao+IypLLz4PW9EPSdkMg2yGQzBqk14Oz6Pgtba/2BvGXfkRP9isCiTwZ6+oynYDnFXxbDpyAU98KWXk8z0HcnhW2K7QVHkOatoxbyV/XBlsouWNhi+DRt6biFrZBNcJFOuLX1SJUrwTnIFgvb3/j6P2x1yv2El20jD4JZNzJQSHdS2KZY0HdhoLManByIWtjimDMQRp8AX3gM9tAh+nA/TX6PIeBpViLZQce0Fp4Ra+DOX43+Qhicqm2IDabpLfwNr2KVUgusUrnqqrVKga7SvCyR7WDWjQzYPJPBNsVsxqlSOa0xszkhNsM1sR1kK22g28BWh7XCmbOczjiKfrYQrZF+jHhsVmk8Nl/U0+eyk2wEsx7LgP6qZLBNMbOewpeAc+WuMH6VHGiBlL0QYtY8CP4m8L4Go2dWVZqn1giMeR4gRozLTJxiL8Q/A9YGTjr95F0AAAAASUVORK5CYII=", "b:deepslate_ilmenite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABMElEQVR42nVTu24CQQzcP6KkosoXnESVMjpFEQKFJARycAKOQB4oCYlQaEIDPb9ARc0vGc1Ks/H5jsK69a499ox9LkkSieNYoijKWa124Q1vNP3Gs+NFpVL1xkTYXe/ZB9lkAuDriM5OGNxop1K/vA7AGlyfHdHKqug3FIB9r7Yyna9CvCMak0ezH0knX7lk3eXTcC63j9k/BSIzuNN/keb9UPrjD2l3JzlaVmz4znKHoStqYGlpPTwFJmreHJ8F1wIWxmhBFr8beV/8Fdq3Ajs6+8NR1ttdQB5kn14DTQG+pREooBoU1u1p3lYTgIGisxz1zGGsqgEJ5qdgueFM8RB4ddM5u1weABfYrux1GbjpAKu+XWu/B930TVoPo4LSDLR/rN7MsIll28ZuypaN/glRFwSUsHUdCQAAAABJRU5ErkJggg==", "b:deepslate_platinum_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA/0lEQVR42n2TMQ7CMBAE70cpqVLxgvwhf0ARFFCAQoHoeCASDW8AGa2lsTYHorCc+G739tbnmKapjONYhmFYrL5f16UYy2N8Bwddt6oLIEvxDOZce8COkvlya8mQZnL/jn9VDqdri6mAFyEWsN0fzwVYSZvdsWz35+IqBeS8KoDZVQishNe7VADn2gHzH8giSQlSI7B2kr1/VNcWALrzkGh3BW7g1zVmElX2GXESxZqJ7jhy8eHX8OQ2WgsCS7bL874poLYUw/xwAxldgtwOtyIw5qIw8tUpid7dQAfjSSWg/3x9WRkt5LEOH1FI8sznF0tu9cAJ8psQAYblJ83/B3DOK3rrrZlrAAAAAElFTkSuQmCC", "b:etherite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABPElEQVR42l2TvU4CURCF5y15AV/AgtrEdg0VlaGgMDGEVkMFCQUWJGKlJiZQUFhYUFLQLHsm+92ca3F3d+bOzzlnZuPw+9R+/ozz6Pt0fsmzX2yLvVk17ftbU+Lkk62Y0EPO7/m6uqCQbJJPX8fSiAahx+vdJIP/PvbtbrooCQVRl5jHYrgLhyeH3vgUSHGQnC/LCl04Ny7p7nxV1ONk64QcCgBSFungOkzdC7oLW0R0rvAT7Meb+zzAxfd/SoHi8K5U7xHRAH3UBDsUoCJyuqBFg56O/EKxHs2qCQWQ5NAu+KXTeRgMW/TyxQsfm5LoAEQP9q1lL8LHQ6K6wt3XuexFn5waeKKLxQKlYL0OTofiIcgY0uD5dpR05Add0yUo2ZeLUQbqMjI0QVDn74ILVbWJ6ujC+R/nQuPHvgIgpknGDnUfKQAAAABJRU5ErkJggg==", "b:fulgurite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA90lEQVR42n2TsQ0CQQwEXQEdQEUUQRtIVPAxggJogBhSMgJEQAIhLxEgMvJHe9KcVuYgONnnP3vXa388+v1wPW3Kud+2xV4Oq+r/inEPORTAl+XBedcVH6DX81hi8hULqvJwvZgMs+mo2OV8PLz7rt4zgPyAErR0V5Iny3oLzrq2IGreqxJVRMgk5uSiQSvIAdmFk+/tBAIR1BGb3C/CoRHfKgN6/jcV16QWcFreM6hokqdSW2C+XjmPCvrOAJDggavtwuUthUmdgiPl1QUJNM7XFHz+uWdZTcULO8PIPw3zZ31dm9ZCRU4GrVUYvbxQk0HrV84aYT/yJyG+IIgdRgAAAABJRU5ErkJggg==", "b:galena_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjElEQVR42mOYMX/D/94pS8AYxMaHYeqQ1TOAGBt3nsPAa7eehOPVm4//X7HhMAYG6QUbgE2SGNzeN/c/Q2P7tP8LV+zGiZes3gfHc5ZsQ8EgvTi9gO4NnC6gmReQnY7N+Vi9gOxkfE6njxeIiQmSYgGbd2jvBUIxgdMLxMYEdbyAnkWRMUgBCCOz0TEAxi4DSlG3RAQAAAAASUVORK5CYII=", "b:givrium_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA8UlEQVR42nWTPQoCMRCF5xgiWHkZwcrWEyw2NguWC14gh/BUll7BwjbyFr7wMmyKIdnJvHlvfjZKKdVtWZY6z/Nq3Kdp6nxuwcUBOQhTIpIRG84iO16fjc2ZR4mbAi+B83B5dH5MJHpbFZD59f52bAranW51f753PRIQf1OwxaCAz682JkoCrG/hwmuTQwFSI7BOgodT8Ow0jSQ6pcBHm5NE3gHOXLuD9NaaiFMOGkMfMnhr6UKyyeqTyEsDgcrycmJrOTIzUxGY5qKwbaIH+SKhwMG+peHL4ePLnacE93UKfHyjn8nLQ2mMAn3muSe+C3/RCGzarFnOGgAAAABJRU5ErkJggg==", "b:golden_bricks": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAyklEQVR42p1SsQ3CQBDzDnSUTMAGjEDPAixAzwxIVMyAWANWYAEaRqB45Eh+OdYnjyiszzl3zuVtvO+78nmdfwb7hcN2UUDyedsMhM4E+cRIwIdbzS78uKwrN9pAL/yrznnNk6gCLK7HVX2R2ziv3rqB1hLpAynofXUDEv9iEDjtl4VgQWTtXAuY85vDvZyA/zLlOwXS5uyDD+TNS0C1LtL7kN67VRJwCzNcyMR5s+6glQ9x0IOCJItcoBUo1ej53MsCpvz1HMxl4Qu2mqYueCBNEwAAAABJRU5ErkJggg==", "b:ilmenite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACJElEQVR42pWT21NSYRTFvz+izFuWWYwF6iAgcj1czuF+v99BuSsEooggpZlpZZeppmZ86KGH/s7V+Y4Do8QLT/tpzfqttfcm+Wob7kAaDm8CiewuoukKQoki/NFteEJZuPwp2D1xWJwRaPQWqLUsNtUmbGwawJhcIFT84/ovvv78g6tvv3H5+RrnH3/hsP8e+913aB6eodo4Rq7UQjrfQCJX402qCCdKWJdrQKhz7/QTOq8+4KB3gb3OW9T3T7DT7KNc74ISjhMHonm8kKyDaPVWVF72UNztYLtygEyhieRWHfHMDiKpMmL8DCfLCMYK4OwhmK0BmCw+GFg3niwtg3CO8BD79OI7+mdf0D25Qvv4UkAv1Y4EitvO3lAOLj66aHkVhLUFJ8IeiO189GciCYhSZfgPOxgvDLF94S1+S5khNmNyQm+wQ8tY8XBhCcTIeYbYtdbrO9jZ4t5YZ6srCs4RuumAMbsmwh6IWVsAjxdFIFKZeojti/C4wQycviRs7hgsfMGsPQhaNO3KZPVDo+Og0pihVBkxPbMAomNsaB2do9F+I0S4vdJo6u5VDpxpH0bWc9MBPc9JsAdiGn1ufhFEsiofi23mcQfYRs4Lg9ktYCuUDGQKnXDG9+7PgNDHGL3E0WcaddYbHaDRhQ7oV02CPRBrdBY8mJ4HkW/oBRypTIU1qRIrawqIV2R4LpYKe6areioSC4XRzLNzjwRnKp6amsU/QbX63si53JYAAAAASUVORK5CYII=", "b:malachite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAiklEQVR42mOQrzH8L+SlCMYgNj4MU4esngHEWPBrGgYufVEMx2mPMv4HXonEwCC9YAOwSRKDeYzE/zOwyfH911vriBOb7/WAY5WpFigYpBenF9C9gdMFNPMCstOxOR+rF5CdjM/p9PECMTFBUixg8w7tvUAoJnB6gdiYoI4X0LMoMgYpAGFkNjoGADWlPt90Hc/yAAAAAElFTkSuQmCC", "b:platinum_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACGUlEQVR42pWTaW8SYRSF3x9rTGPTlNQ0NWqtRm1qKopNC1IqUFmk7DDswzbs61D2pRSR2rrE+BeO844w6cIXPs2HmTPnOefeS4p8C8FoBv5ICqk8j2S2gniqBDZZQDieE9/5why8wQR0RjuOjq041FmgOjLBZGVA6AdXv/7i+48/mFz+xvjiJ0aTK3QHY7R7IzQ7Q/CNPgqVJrKlOtL5Gjhqki5hT6UHoc798wm6Z4Kg/xXN7jnq7TPUmn1UTrso8e254ihXwPbuPoje6EC13kO51kGx2kKuXEemUEMqV0UiUwY3fUa5Ily+KBzeCKyuICwOPx5v7YC4/TEJezi+xGB0gd7wGzpCBL7REyiEHws9XXeOTLt5sf0exMmwC2HPxDT61is5yMdP5jvYsVRRwo4k8gjFshI2bd5gcUNvcmJt4znIiTMgYZ+2Bjew8+XGXGc6Uhpd7MBs8y2EPRM7vCw2nr4GUSi1EjY7xQ2waTChJDyBOJxMVBDQJwubOwytwQaN/gRq7Rcsyx6BHJtdaAkL0xAWhka4PtLbWzlztrlDQh+B/x3Q9VwEeyY22xjI1jdB3rxTzcW2e8ISNi2adkWxlRoj9tWf8UGpw70lGQg9jJub2LhzTLedDRYPaPTlVaEDelWLYM/EWoMdSyvrIAeHBvGqFAdayPc02FWosSNXiodC50xH9ezlW7Ewmnll7YnoTMX3HzzEP2F5KErwlCA+AAAAAElFTkSuQmCC", "b:pyrolite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQElEQVR42nWTsU0EQQxFpwBExF7AQnAB0kUEVwASV8ERUQENkJEiEZEhQUQFR0SO6ALRAx0QDTxLb/SFROD1rMf/2/4z0y6mqV8ulx2/ned+tVqVv16vy/jHzheLsTYOrvFxgzVgkvGv+1Pvz7flKSDJbu+gf87HFWuyJSuAAj/clJcYwMfhUf/eng1Mu9tsepJQkQQMsHGMyv3lfoyJrw4gqYpvj/3r9GR0QBwb5O9PQ5+hAW05K2C8pHYnwKo5chGwsCpCuTm0+CVVA+LoQLHSgI/HmOqTYEfsSaqIdtiyNZIEC8yWASOi8ergP7Dd5LyIyBoCL15dJMEAOSpvnoqnmF4098cICVawJCFujGKMUwQ5T76DTJIwx5RwjJA3ziTnxHwzdOpIRZBCOa/nno8ru8xX2qyQJPkPyd8TSYIf17LVbwezLNIAAAAASUVORK5CYII=", "b:soul_soil_soufrite_ore": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABNElEQVR42nWToU4DURBFny6iphJFUtGE1DVgECQgahDY/kFlCR5Z/gHBJ1TwBRg8iqSuSR0JAUVq2pxJzmb2ZSum+/r23pm5d2bL7PZyP704j7gaDyM4/27u4jwZnbXuwRPz+5vAFH548b2+DnAX2efu76lJAoYkhYuP1WmA/n8e99vPSQAkEhAlizFRsT1DSRABklyJWYK4kisJ8NxF9KxnJZskiHaVYtA6urPpYWImq4+2X5/7ERhFeJfJFC911rpVyPWoKeJYi9lyy1bNcpzW1/uw5U1LAruQyVnO8uGk5VNjYm6TJxWObWcm0lkksGLW6uzr6diR5FikY0YB1DB9yHLAxSrnlvHg7WUQ49Es3i0XvWbd88LFHjhjdQoiWa3bpeM/XYUEEnBBxRrkl9p1r/QDsyQEQ/NQnpwAAAAASUVORK5CYII=", "b:wolframite_block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACRElEQVR42pWT6UtUURjGzz/QuNy5986+tZjtREQ7EUEEErQR7ZZZlllmWZZjmaWZTWrjTJolYplFUZJk+77vtlAk7YvZChERQR+eznvsXhybL/PpfDkPz+953vdlzz0+XLFl46JtNR65CnDfuQF3HOtx07EO1+w5uGxbgwu2LJy1rsReNRm7lSRUK3OwS56Nw6ZUMBL/GVaH30Nq8WvQHvwcWIMfA6rxuXcFWntuR0t8AG+6bkOzewueuAr/mWzEXUcegvJ0MHL+2rdSCD5ywYf4IN7HlQnRq84leOHZGlZ8ixMWSBPA6tT5eN2lFC89xXjm9uGpezMeuzbhoTMfTTzOAy6458zDbUcuTlmW47h5GY6al+KIaTGyYsaCnbas0LG/96/Ct3478aXPDnzqVc4pSjlFMain9s7XeTcUPTd2HNgJS0ZE2JqYoufEJoBVKYn/YROuhn3DvhZX7dk69iHTIhxQU7CPR0+PHg3WYErTsd/F+UOwm91FYZ3P8ZFSdNFBPZ9lJNiamKJnRo8BKzNO07HbcL24xD+et67CGWsmTvLm294MNJrTUavMQ40yFxQ9xTACbL+6AK09gmjpHsDbbv6QkTaFbKVXd27kfVB00QGtZyTYmpjWOC1qFFiRNCks9jGOq2E3mJegnk+AsCvlWSiXZyDAoyd2GgxGh9FxE9tj0zF1dD6oLgRFFx3QVUWCrYkperJhOFiFPFNcld84FSXGKfBJk1EoTUS+NF7MmUbljUkQhVHm1KiRwpnESYah+AtEf1Jv1BzKoQAAAABJRU5ErkJggg==", "c:cobblestone": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAElBMVEW1tbWmpqaIh4hubW1hYWFSUlLm8qFQAAAAcUlEQVR42gVAARGDMAz8MAMjh4CSLwIWIgDSIGAD/1p2iPk5pTfFOW3QLR3nGrrGQxSLTL1wp2TJ3PF6W/yaOjSV9eEB2y3a4omQPSerG4f6biMXkP0a8X2DMdpytQkuIWuY49CuziJmclhoIcsjUvgH41gVHD61kt4AAAAASUVORK5CYII=", "i:ascension_compass_00": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAArUlEQVR42mNgGJSgOlTkPzZMtMZHu7zA+MQsg//LqxTgNF6DYmz44IpBikoDhFEwSAwkD8IgtVg1Y9OIyyAUQ0AcXJrXNihhNYQoA6ZmS/9/ljINTBM0ABRo2AwBGYCuGRROGAaABP9/2gLGyBruRvfB2SA1IAxyEVYDftyrA2OYQSBXwcRgUQnSjGEAsjdgGmCaYGkCFoVYNSMbgmwQugEweYIpEqYQHQ/OjAcA1HwsqHJbuWkAAAAASUVORK5CYII=", "i:ascensium_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABEElEQVR42s1TsRLBQBBVG6OQmRi65AsoRSu06FEzdEi0fAOd/Ej8iJS0SqWZtW8vp0mMSyczb3K52/f27e6lVPrbp9zySNDukl6bk5n0oJfgQk9yjmeBkQiCNrcrVfsjhcFYsL0lVPF8cWREDu4JxZwdwJ41XSiRTi9fBGQE1CZzITunSOAy7GVAzXAvZygFohkRXTeCVN1KoLk7kL0KZb/GLuAE+5l+QADKCNCNAxkAGWXhHCJ1Fsx1ABKC11xzgy3rzBBFI3Fe9Yfy/UUgkvqt2eJjXSbBJPQCa+0md6QQ0UHI8mlomhn2hfxrlAhy0wlIRthmV3hXuj4Z3cQ4baT0QWcuep31PyCXpwi5yPMGQwsNesxHtYEAAAAASUVORK5CYII=", "i:ascensium_nugget": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATklEQVR42mNgGAU4AZeB1X8QJlvzrv9f/kdcO0eeISBNIM1KMxagGECSq9AVU8VVIBcJxWTgNwCfMwl6gaqBR9Cp+AwBaSbbAIoTEd0BAExmTfl+5a2aAAAAAElFTkSuQmCC", "i:bauxite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAmUlEQVR42mNgGHTg/4aa//9nhYMxhhiQJqi5xZQBjv9f2fEfQwyXITCF/08v//9/VSGGASji2AyBKwQq+p+GsA3kdGzipBvQbUukAWgKqWsAEGM1AK45DY8BULm3cWiuwKYZmwHPYhBqQGy4IaCoghuQxgCXRDcA2RCsBqAnFmR/wvgY6oB6IQpACQaaaPAlV5g8GMM0DzgAAD/GbL6hSGJ+AAAAAElFTkSuQmCC", "i:bauxite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAu0lEQVR42q2TuxECMQxE3RQhdZAQqwpCsuuADsgIKYKMK4GhDeHfyp+Tzg64mZ2xR7tPGtvn3D8+vp2417QnLK4Ht1EN2fWgyJ838+vOvBxNgOqRYi5EUekgdWo9BbA+0wbhoGCkalTq6gD4rAC+58qIUaE6TMlbAI+LdIoQK5iFcAT4bDokvwBoLyyjZ397zwDgDDQAdZ1NgKUpADkzPAWQ21Akp68BRpBhuIeob38UFoh/IM2fF/ZG+Ae9m+kKR9k7NQAAAABJRU5ErkJggg==", "i:bauxite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdUlEQVR42mNgGJTg/6zw/9gwcZqv7PjfYsqAFYPkiNL8Pw2Iu21R8LMYAob831CD0Hxm5f//Ty5DaJghQHG4IUC1uA0AKQZpRNMMw8QZAMTobJDtRBuAMxApNYC4MEhjIM8A9DSAnohISgvYUh3YIEKahyYAAEn6DRCqlvCUAAAAAElFTkSuQmCC", "i:bauxite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAg0lEQVR42mNgGLTARozrPzImWfO7JRX/d8WbgvECL3XiDYFpftgbCzeg1EAcbIgGH9t/ojWjG0CUISADQBpBCkEYZhBIc4amCJgm2YALZe5gjWGKAgNgAEgzsgEkhwFIMygQQZpBYUB0TMACDaQRphlkGEHNuAwhymZ0ANKAjAdvpgMAcXe27YyDL6gAAAAASUVORK5CYII=", "i:bauxite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAp0lEQVR42mNgoDb4Pyv8//8NNRB8ZQcEg9ggcSAmqLnFlAEvxmkITPP/Myv//39yGYJBbBDutgXjZzF4DEExAE0jHKcRawCSBjAmygBgQIEl0RSDxWCG4DUAGNrIBoDZ0NCHi8MMAIrjNwCmEBSF2AwAitPQAGjAYRiAJo47EIGK4PGNHAbI4lgNgCoEKcJmALo4UckY2QB0cdwZCSkzIXsPGVM19wIApe6SRS/4mz0AAAAASUVORK5CYII=", "i:bauxite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaUlEQVR42mNgoDYwEeH7jwsTpfnD5x//j5y4hBUTZRBM0Y4YKzCeZKcGxugGkeSVJDUJuCENrROJMwDZoIoIE7AmmCFEG4CsGcYnyQvImkkyAJtm9LAhSzNZziZJc5CN0lDTTFSo0hoAALq7i/EgFfL5AAAAAElFTkSuQmCC", "i:bauxite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAW0lEQVR42mNgoDcwEeH7D8Nkaf7w+cf/IycukW4ASANI444Yq/+T7NRIM2CkaEZWQJbNyPFLsbNBmGTNMAMqIkzABjS0TiTddpBmdK8Q7f8gGyWsikkKQIaBAADpZoQ4uOQpjAAAAABJRU5ErkJggg==", "i:broken_cinnabar_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA30lEQVR42mNgGPTAh437vxcUE60pgJ3nPwiDNBez8cIxXkNCOHj/BwE1gTBIsRQD8///ST7//0S6/v8b4/H/qpQMbkNAmpFtAimGGfBcWwUFYxgC0wyyCV0xNkNgLvEDuhRsAMzJIAlChvyf0wRXA3cJsgEgCWRDQGzksACJtXEIwF0B0gsOcWQDYC4B2QbTvENADKwRhrEaAFIEMwDZ6cgaQWpA8jADQOEHDgc/JEOwGYCuEUUzcopDNgREwwxBjmKQszE0w4AXWsqDhTTIhX7QREYwGXshpX2S0j+5AABlURHyyPNapAAAAABJRU5ErkJggg==", "i:broken_ilmenite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABBUlEQVR42tWSPw/BQBjGzRKEpiihBv8GEbGRDgaWboZGolMNTCbfxuQD+Awms690PK88l5O2hE2Tp+3d9fe7966XyfzNZVkVhfwEIZ3eQPJRkgQhU2+uk83mVCrkzXwBHt3qeDqrMNqry/WmYQq1BNBytZHO0XgiHy38QAXrrZaYlWAM6faHTwlLRadZKgFKMI7qAIJpuu2nADfOjlkJBuFWyqcAAJMqwDPaHQREm3DVaehgPyjXglq9pQV4uq1ODEYfK7BtR6IFpVJZJEkCvCNYHvYBYKFgSUSQzxdlTZQgUqbxFzBGCBsJ8OUsoIFfybUBIEQJodghMiU8TGaJb6EkybfQHbsJ/065EfA8AAAAAElFTkSuQmCC", "i:broken_platinum_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABIklEQVR42mNgoAUormj8X9PYBcYxCRlgTJTGrPzy/yDNdx8++//+01cwtrJx+g8CBA0CaQZpfPX24/+bdx6BMUwziH3p2p3/G7ftx24ITDMIf//x+/+Pn3/gmt9++PL/0dNXYM3TZi/539U/4399S+9/DANANoM0gzBIE8wAkOZzl2/+33voJFgzyCAUA2C2Hz99Ca4ZpglmCEjz1l2HwJphGG5IbVM33IDnr96h2AjCMENAYmcvXgdrBoUHPCyQDbh68z5cM8hGEEYOi6cv3v7/BnQligEwQ0Cat+85AteM7AWQZhDGqhlmAEjz3EWr/0+avgCn5j9//+OOSpghMG8g+/071GastqMnYRAGBSQIIxtCUpIGGTJv8Ro4JlrjgAAALKnMKLy3XhUAAAAASUVORK5CYII=", "i:cassiterite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAmklEQVR42mNgGHQgO8jpf7a3GRhjiAFpgprN5fngODsu9D+GGC5DYAqzo/3/ZwfYYRiAIo7NELhCoKJsa2m4QpDTsYmTboCbHpEGoCmkrgFAjNUAuGagRpwGQOVSzCVRDcGmGZsBiaYScDUgNtwQUFTBDQBimCS6AciGYDUAPbEg+xPGx1AH1AtRAEow0ESDL7nC5MEYpnnAAQAcTfrbNqMK6AAAAABJRU5ErkJggg==", "i:cassiterite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAwElEQVR42q2TsQ4CIRBE7wusTSz8Azu1sLOwsTEmVkYTY8n/17jLMQPHLQeFJJPA7cw7ssAw/GO468GX6vbo5LhdzZRDFj0ouu/Lu+fNu8uuCjA9LMZC0GlDA+vyLfckwPsxLhBWqTFCGM7rAEiWgM9+nYzYKpSHxaPeBLif+acAqQWjEA4AyY5NkglAS2FuPfqn5wwAemAB0NwyPAPU1AUwOo5wF4CnYYjdtwAtSDNcQsy73woTIhdk8vJ0XQn/ACCgTgUhX1TqAAAAAElFTkSuQmCC", "i:cassiterite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdklEQVR42mNgGJQg29vsPzZMnOa40P/m8nxYMUiOKM3Z1tL/s930UHCiqQR+Q7KDnBCaowP+ZyfHQmiYIUBxuCFAtbgNACkGaUTTDMPEGQDE6GyQ7UQbgDMQKTWAuDCA2kKyAehpAD0RkZQWsKU6sEGENA9NAADSxrt6SlR57QAAAABJRU5ErkJggg==", "i:cassiterite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgklEQVR42mNgGLRAWoDjPzImWfOMfN//ifZqYOxvJEu8ITDNrbE2cAPMFIXAhghxsf4nWjO6AUQZAjIApBGkEIRhBoE068sKgGmSDSjxMwBrVBfnHQADQJqRDSA5DECaQYEI0gwKA6JjAhZoII0wzSDDCGrGZQhRNqMDkAZkPHgzHQAERJNqZm+k/QAAAABJRU5ErkJggg==", "i:cassiterite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAp0lEQVR42mNgoDbI9jb7nx3kBMFxoRAMYoPEgZigZnN5PrwYpyEwzdnRAf+zk2MhGMQGYTc9ME40lcBtCIoBaBrh2FqaSAOQNIAxUQYAAwosiaYYLAYzBK8BwNBGNgDMhoY+XBxmAFAcvwEwhaAoxGYAUJyGBkADDsMANHHcgQhUBI9v5DBAFsdqAFQhSBE2A9DFiUrGyAagi+POSEiZCdl7yJiquRcA++IUUp65PcYAAAAASUVORK5CYII=", "i:cassiterite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mNgoDaQ4uP4jwsTpfnD5x//j5y4hBUTZRBMUZmfERiHmCiAMbpBJHnFRE4IbkhD60TiDEA2qCLCBKwJZgjRBiBrhvFJ8gKyZpIMwKYZPWzI0kyWs0nSHGSjNNQ0ExWqtAYA1AGDRXq+brEAAAAASUVORK5CYII=", "i:cassiterite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAW0lEQVR42mNgoDeQ4uP4D8Nkaf7w+cf/IycukW4ASANIY5mf0f8QEwXSDBgpmpEVkGUzcvxS7GwQJlkzzICKCBOwAQ2tE0m3HaQZ3StE+z/IRgmrYpICkGEgAABW+XoI6gg6ZgAAAABJRU5ErkJggg==", "i:celestial_crystal": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjUlEQVR42mNgGPRga7vaf4o0X1xs+r8nWeI/2Zp/PekjzxCQAe/OJv///2kLmCbaAJBGmO3fblWADQDRMFfgNQimEWQjSBOyASAMEsfpHWQ/gzTB8MvDIf+/362B84kyBOYCEA3SDKJhGgkGKMyfyGGAbCvRgQlSCIsFsqIR2RVkJyaYIWRpRjaEppkNAH8a4EXD6BnzAAAAAElFTkSuQmCC", "i:celestium_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABC0lEQVR42mNgGAXUBfURov97UyT/45IHyYHUYJXc2q72f0GJ3P+V1Qr/J6ZLYSgCia2qUfy/EKhmW4capiH9aZJgBXMKZP93JohjKOgAis0tkv2/EqimPxWLK5dVKvzf1KICxtNzpDEUgMRg8iC1WA0AOW1ru+r/3b2aGApAYiA5kBqsBoCcB5Lc0qaKMxBBciA1ILUYkldWWP7fP1H7/8sjoTgNeHkkDKwGpBZF4k3B/P/bO9XBgnc3u/y/tNQcwxCQGEgOxAapfVOwAKHm1noHuKbDU3X/r61XwjBgXYPSf5AczDCQHrjknj7N/3v7tcACp+ca/T891xDDgDPzQOJGYHGQWpAeqqReAGR9rGT7QxmCAAAAAElFTkSuQmCC", "i:celestium_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABYUlEQVR42s1T3ytDYRg+f4JyM7Xo2GYbGrtQimslxd/gR5IaF1ZuRsmPbLaV1HaMlUzKpmQWZosUS1xJ7V5STAr/wON7PiUzclwobz319LzP+3znO+85ivKXNdBWBuJHY05rwEe+Oa5iz2uFv8eAQF8FdmdrpPbZVxSQmrEgG7QjH2+B5jLiJtOB28NOiet0O8JCY48eeosCWJFhI47m65BPtOJ4oR6ZgB3pOds7qLFHD70l18gGa6XxfNmJy1gTziKNuOvXJMipsbfvs4LeL9+Dv9eArQmTQDUuok48eTYkOPimm6QnpzlKA67Wm7E9acJJyIGdabO8I56TwEtK8uSUGadhh/TQ++1GFoeMIsCCFXclHkdWJcgZwJ6u/XNlxIMrioIAeWJMhe4PiI8Z96i4H1xCQYCcmu4AX7dB7vrAb5Mg9wpNd4C7q1wM2rE2WiVBTu1X/0FMDPJkglz5t/UK8DMO5VleRH8AAAAASUVORK5CYII=", "i:celestium_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVR42mNgoBYoDxL+T6zaskAsaltixP5XBIsQNKQSqAakFkVwSqbU/5pQkf+lAQiTd3Zr/N/eqQ7GIDZMvMRf+H9NmMj/yUA9KKZ2xIv/r48Q/d8WJ/5/frHc/x1dGv83NquAMYgNEgPJ1YWL/u9MEEd1bbGf8P+qEBEwrg6BGLa5VeX/qlpFMAaxQWIwNSAM0gM3INdLEOx8kERDpCjYibMLZP8vq1QAYxAbJAaSA6kBqQXpgRuQ6S74P89bCCwAciLIfyBNi8rkwXhOoSxYDCQHUgNSC9KDNZSbo8X+b2pR+f86f/7/p8lTwfh13nxwWDRFixEX1Y8TJ/9/X7n8/9uSxWAMYh+eqkt0OmFYDHT2m4L5/z+3bgBjEBvkFaINAEUX2BVVy8H4UcJkzMRDCIDi+mXGTDAGscnKH6DEA8IMgxoAAMop4awkH9nMAAAAAElFTkSuQmCC", "i:celestium_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAuklEQVR42mNgoCXIU3H7D8Jka97qX/h/rm0S6YaANDxqb/5/o7yJdENACt+uKfv//8MqMH06sQ5syJOuZsKGgBSANL5bVwJ2AYgGGQJyyQrXTPyGgCRACkE2gjCIDcIgTS+nQQw4HlcDpjEMAQmAJNAxSANM0/bAIrBGrIbAbAfZhM12EIY5H0SD5LC6ApcXQHhnUDHYZqyakQ2BGYBsCFGacRlCkmZ074A0w9hkpUZYbFCUH8jWTCwAAPYQE/1mQcKGAAAAAElFTkSuQmCC", "i:celestium_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABW0lEQVR42rVS2y4DURTtLzQxMdOZ3r1INProF/gAxIPE/dYigiC9KOKhlJKW6iSCREXr/uqNRHj2QctZRyqimROROMlO1qy19p69z9ku13+c7KCO3LCBgylTBnF2QMevkh82WpAf8+Bs0Y/ipInCxCfeExw1ZfLRtIWb1RAuVgJ4KrThfj0sg/h8yS81ehwLbA/psGe9OIyZeC5GUE0GZRBzFGr0KLsoz1g4mffhMdcKW2B+E5MjViYnezRcp0O4SgVly3W+shxATXDUEt1NzkXiXW68lqN4r3TgeM77ZSQm92ZHEet0q7uoiZlfSu3yHupcKW5JjpoyOT9q4G4tjNtMqMFIji9Cj2OBdK+GaiIoni0in6zOE5O7FBo9jgUyfRr2xz3S+H3ztsRmkuMy0aPcA85+uuBrMJGjptwD/mlnxJBj/NTI7QqNHuVFpsQubPY3N5jIKef/6/kAGjDfnqElbEoAAAAASUVORK5CYII=", "i:celestium_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABjUlEQVR42nWTzStEYRTG54+xoMRGYWVngYwQs5jxUdj5uNzuZcyIcVcyG2QWNpRSs1HEhpEy+YiyY2NFQoZMopRxzHM4t7lz7/vW6c703uc3z3POGZ+v6Gw3j9COX+Naq+sjq7KNK1ru5zJKG8mnOhC8JE0WogBD3cctuonE6HJgmg4DphoC0fuRRnvtOgs/L3T6ujL5M+5iFa222BOS6jD4xez+MIPEQTaV/57+iyRiOBkvayKH+Od5lQQiL8MNXOSeVujjdMx2gjjoCYvnqwKU2ZhgsVc0dpF3BUhmPcwQ9MQBeFywXIChknparu2iu7lZjgIn1/oMbTYMcmMxHVuMnGc9UXI2tZ9et0YZInEEhCcDxEGxeLdFs8VwUhgH05HJuPIu1YQ4Cr0lXZFkzCLGsrkA571TlHtIeDZURowoLsBidZBOuiP8y4gDJ6o9gQtsLJzYl+lgmPcAkEIRYBCq9oQbCDFsH4cmCU4KxZgOpqTck4NOg75v4wwpvpMR44ny/AMBgFK9oBT+n18yBJVdGYFEeQAAAABJRU5ErkJggg==", "i:celestium_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABn0lEQVR42n2TvS9DYRSH+8eYLMLAIkYJ0kgkiHQSBkO/lJR24VYjIiFpF0MNHSQSA1JW0sFgMJAKiVUo0fiMhIHDc/TclIubnJz3vre/5/2dc976fP88+bZhIew9XNcuRLYlIJnmgKQaesQjmmvqExNeZdOa2UP4sBORza6w3G3FpJxJK8Qjft4fk8pqQsUI2CuFHF0XByY1v5WXpBR01MmXsLFXiNNxR95v8gpBSFwspHXvcGRanvZGdQ0QJ7jyLbcOyuViWgNIZSWpwuOwo07kfk22u6MKZQ3QnLgAhLv9cTlLpHSNGJsI1juCCuUdIE5cMY8BNjpDrouDoSm5LcRktloWIKA4sRJw6daPmM6Sc59AExuo4I+oEyuhdlIKQfh6MqEASknW+10xQGCIKQExJdiI3REixu5jMaqg8/kZVwyIHlAGAI/YStFmXee0mUBwghg3JrZ74gEYhB8AwQnl5KpNtgNq74lHjIjMhaFOXNh0bMSU+U1sdKZArp0MjbXp4MbG7Dn55Sju/VBtLGGH/Amw+O0vzT6XzeLn9w+pvw0tgRJp+wAAAABJRU5ErkJggg==", "i:cendrium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAxUlEQVR42rWTQQrCMBBFA0pRqxQVSys9iwfwBu507d4DuHbtdatv4Esb2zAIBj6B6fyXmUkaQmI9q6ZF4ZeFcR8mJjfkvilbSUaBiD12tSkJ6J4qYVLcBcB0K7YmnXyarT6VuMxqBTM7sVFIbI4rQIfp3ADsXxD1qJ5J7A4U0DHLzSxAbxaaNEGdrGQJKAI02AYQEi+LomeQiKmV0XdBBSSc3xANTe1cl2v7lrxGAdDQEF0AXZtKVWuulxjDXK/vb3+jd70A4MrRwKtndTUAAAAASUVORK5CYII=", "i:charoite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAu0lEQVR42mNgoCbQ5XP/r8Jl9V+OwwCMYeIwPkgOpAan5ie7/oMVuIvnYRgAEkNWw4BuOkjw8uxfYNqQ3xfDAJAYTA2KK0GEFo8z3JBlUQ/gCpANAIkhy8H0oNgAM6RQdzlYIcwAEBsmhqwWJQxg/oQ5FaYBxoZ5DT18sBqC7BVkNl7NMAOQNSDHELawwaoZOZSJkUMJRFxxjZ5GMAIRFi0gDAtE9FgAYZAcSI0qlzWmAcgYXxgRo26IAQCZd9fCZRK58QAAAABJRU5ErkJggg==", "i:charoite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABB0lEQVR42o2TvQ7BUBTHjdIIi8QmEiwSCSuDwWASMxsPIDF5A4nRbMbmAWyeQWI2eArLkd9N/s2t6keT03Nz+v+6t22hXuyZqpDzinC4HWdP2w3vuUTAgIUTCiybB9v2r9Ypja0dDP8KMeMZGLBwQgFqVF3ZorEPRX4FRAYDNrJtFpPaOiLip2DtkyUQicewX5m6jphEFF1EYWICiggAJ0RUPjnxnCQid3q3PHEFmRk96ZBjIq1gYI/jx943c+tMsgSIiSvk8+Jlm+7FTvOXm/EsU0BudJH9WaoALkTWvv0zUCp66qcKgOhylTOzTDKXotPZM+XPcv1tOAHm1VGsc7kn/bJpB/cFzBUFT24EAfwAAAAASUVORK5CYII=", "i:charoite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAr0lEQVR42mNgGJRAjsPgPzZMtGZ38TwwNuT3BWN7kaT/WjzOhA2BaY5S6Py/LOohmAbxQQaAMMgwvIaAJEGKYIbANCJjnAbANIMUqXJZgzFMEzIfpytgBoAULo188P/y7F9wjSA2SAxmCE4DQAoKdZeDNYDwk13/wRjGB8mB1BB0AUghzBUgvCzqAVwz3oDEZgjRmnEZQpJm9PDQ5XMHY5z+JmQAjE+yATBDsLGpDgD3GcqE8GcQmgAAAABJRU5ErkJggg==", "i:charoite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA/klEQVR42mNgGNRAjsPgPwyTpTFIpvb/k13//9eabiPeIJCifRUfwBq35LyC4wz12WCM1xCQ5PWFv/9fA2KQASB8rPkr2IBWqwP/dXhd/6eoTsVtCEjiZMc3uEYQnux+7v/a5KdgzUkqk8F8rAaABJdHPwTbBjOgzGAt3GaQt0ByIHGQgUqcpv8xDID5GxRoIP/CNINshmkGqQEZhtUAkEYQhvl5pu8VFM0gF8LCBsMAEAAJ4tIM8juInhNwHbtmmAGxSr0omkGxAgtYEM7RXIDbAJghIFtAmlfFPYZrDJdrAScsvJqRDQFhkFdAmkv0Vv2HiZGUpGGaSNZICgAAW2En3epYfj4AAAAASUVORK5CYII=", "i:charoite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAzElEQVR42mNgoCaQ4zD4TwzGqdmQ3/e/vUgSmI5S6Py/LOohGIPYyHJYDQEJqnJZ/9ficQYrdBfPA2sEYRAbJAaSA6kh6AqQQpAmZAwSw2k7Nm/ANMAMxOt8GFDhsvqvy+cONwQWaDDNIDmQGpwGgBQ82fUfrBDZJhAbWY6gZpCT0Q0AieE1BCS4LOoB2InoIQ2LIZAcSA1OV4AUFOouBytENwBZDm8sgBSghzYsdtANxpuYsIUB3kSETyEug/G6ApsBBDWj50pcfGQAAEi01EWOd4XVAAAAAElFTkSuQmCC", "i:charoite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABAklEQVR42o2TLQpCQRSFXzQaxWA0C67AZhMXIUazwSW8Ihhchc1gNBkEXYOIC7CoxZEz8D3u/Dx8A8Mwc+855/5NUdSscnRyu9nDXTcff972X1c0XQL3WoNki0Rkss/72zyhDHI+rp6B87A9Dcj0noAFkPFcvhJ1kUy6S4eAfLNghYkD6roLrCh0IhIQXNbvSg12SAUUGRGQTlJYkdjQ1AHCtzVI0hCTwJbsfnCVUwykSxIoyNkyogyYWQDIu/cn93Fn4U+UUdM9LrRaHLQSAyDy9SHWtDiYAybM5meViZJ0gynMFSmucq5OCUFcdWpCd+IWB+HnPoy9//19ArBt3k3AP0i7jVX4zhHHAAAAAElFTkSuQmCC", "i:charoite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABBklEQVR42oWTIQ4CMRBFVyKRBIFEk8AFcDgCdyBINIfA4HDcAM8JcDhOQDgDCaLkbfKabbcsmzTTzs6f+fM7raqO73kN4X58h8vmFQ7zW8h97Iugx/lTB0z7qzDqTWrLAugZS0wrAWABBCyH+xiMbzs+1T4TthIYCBNoC8YCBoTlXGzBYMAEy4AzAMCd1QmWIgAFzBnxX2ErNjgVieVe1fN21CipbFUAVvC6ckEtkggn9SYLkjQT25K+2L9ORFLAWX+dtKMWCf3SFVqlCZa+M8K8tEZ2MdjF/r0u/tkSiVmAI30pAWaPzTWx9+KDsbJglVWTnzPf7BsgK1c2f4mdSQguzvaf7wuDsMA56OUW0gAAAABJRU5ErkJggg==", "i:cinnabar_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVR42mNgGH6ggo3vPwzjE8Op2YmV678vOw+GAd/czDDEsRoAUhSAxQCQ+HpeUeIMiODgxTAApJkoA5K5+DEUwgz4355H2ACQojlcQlgNABmO0wBkZ2IzACQG8hq6HFbNvZyCGAaAxEByoADGMARmA7JmbOkApgYU1RgGEJNYiFU3xAAAnbeOZCc0KbQAAAAASUVORK5CYII=", "i:cinnabar_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAv0lEQVR42s2SMQ7CMBRDu1BoaIuKxIVYERsrAzMXYGbnBr0DRwx6X7IUmgQlG5Gs9v/azo/TpvmL9WhHv0QVh+K4cv687v17OGQN/PxMcyhO7dY+gNntvwi800N876e0Ac3LZrAnRJlILPOb26UNXt1kxGs3GgkTQWI2gAM3MpCJRBo1BMeUOJWTGYW7EprEhJwLOMoiHDvEMtysQQpMU2QQJi6QB/0iA84qsm5EdZR+zoS0dWVV4l//fbG4dn0AWC3i5AHFa+kAAAAASUVORK5CYII=", "i:cinnabar_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAeklEQVR42mNgGJ6ggo3vPzZMtOZeTsH/63lF4TibRxAsRtAQkAInVq7/vuw8/784GP2P5eT7n8jFDzZkDpcQYUNAkiDF3mzc/0M4eOEuAGmGYaIMAGF0/4O8QbQBuAIR5CWKDAB5i6ABsIDChkEBTFRMYFNEUloYYQAA3S18EkU5jRwAAAAASUVORK5CYII=", "i:cinnabar_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA00lEQVR42s2SwQnCUBBEc4oBDeTkQTx6sw5BPhJEvAh2YQcerMJCbMQabEJZM5/MZ5J8jXpyYSDJ7huGzSbJ39cqHZqr9TG0HowMAnxI86C3Jtsst00FQQrddwt77Jd2nUxfmwBWCMOAAN/ms4Y6JoRjwzExSVkl9QaMjEafiZ2PYSYkUQM01ATPkIKnrAgpwPqNqwGTAML7pRh7AaSiBhiiAUGFIHxDnwbYn99DKSYxgzbYgPXi1ITR9fcydgdmudblcdNIWNZH1nvGTm7/q/v/tZ4UoRUegihW3gAAAABJRU5ErkJggg==", "i:cinnabar_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAoUlEQVR42mNgGHSggo3vPz5MULMvO89/J1au/9/czMBsEF7PKwrGvZyC+A2BGQDC3mzccI0wPIdLiDgDQIpDOHjBGkCYZANiOfngikEYxP4/p4k4AxK5+MG2ISsEsUFi2TxEhAFIEbpNMIOJcgHIJpBz0Q1A9hZeA2ABh24ASAwUsEQZgB7fMHFQ1BI0AKQZmwEgMVACI2gAtmRLUnKmOwAAVjaoLF0qWsQAAAAASUVORK5CYII=", "i:cinnabar_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA10lEQVR42mNgoCXwYuP+D8OB7Dz/SdIcBNRQz86PgkGGBEFxCAcvbgNBkiANlyWl/7/SU/3/Py3g/wFhCbDYZn6x/50cAmBD8LrAD80FIINAhnxxMCTOABAAOfmbqykYIxtSzMZLfJiAXHJPSeH//zlNYI0gQ0BeI8qQICTNIGeDXAIzZD63MDh28AYkKMB+hzqBNftBvUOUATDNMJthAQZyMkgjyAs4DYDFP8xm9Pj2gxqCNRZgUQdzIq7EglUcXXMQqUkX5B9QAIE0+5GqGTnjkKWZEgAAjiGxPCbJ2BwAAAAASUVORK5CYII=", "i:cinnabar_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAsUlEQVR42mNgIBH4sfP8D4LiEA7e/yRrnsgpCMYt7PxgQ0jW/L88/v//OU3/i9l4iTfAi40brPlfnOf/JdzCYENABvgRYwBM8w8/G8o0b+IXBbuAbM0gGqQZJE5QI0WaYdEE03xDRpY0zSCNJGtGNwQU2g9UFInXDApVkMJlPCL/vzgZgzUSbQBy8jwlJvW/BphEYS4hyvYgqAHoNhLtb1COAmUMkGaiEwk2Q0AuIUczAPRasIl3p49zAAAAAElFTkSuQmCC", "i:cobaltite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAuklEQVR42mNgGJSAjVfzPwjj4hPULKIci2EAuhhezXzS3hgGgMQIGgJTyCvhimEASAzdYKwGgBRyidhgGAASQzcYqwEghdI++zEMAImhG4wBBPVb/ks4rf0vppbyH8RGFgeJgeSQxVGAqPUisKLm3f//l2/6h2EASAwkB1IDUotqs0Hbfxm/Q//nnoJo1st/jqIIxAaJgeRAakBqQXpQDAApAknANKMbADMEpAbExjAAGeMMIyLVDTEAAKKXo1E4sphPAAAAAElFTkSuQmCC", "i:cobaltite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA70lEQVR42mNgGBSAjVfzPzLGpU7QoO0/MkYxQNag9L+IciwYC+q3/Mem+cC9///nnvr/v3zTP0wDQBp5JVz/B07+BaaRDQGxRa0XwTVjNQCkSdprDxiLqaX8lws5AzYEphmmUS//OW4DuERs/ku6bvq/8uJ/sEtAuHk3wtkgzTJ+h8AGohiAbAhIk6jVArArQBikGaQR5gqsmtHDAqQRZAjINTAbYS7AqRnZAJBmkEtAGmDOBxkCMoygAbDAxOYCogyABSQsDGChDgtAolwAMwQUlSCMN/RxGQKyHWQIyDtwzVhSKN68AUtIMEyTjAgArEMRBCFShB0AAAAASUVORK5CYII=", "i:cobaltite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAmElEQVR42mNgGJ6AjVfzPwgL6rdAsEEbGBOtOXDyr//Nu///lws5A2aXb/r3X9R6EWFDQJq5RGzAmsXUUsCa5576///Avf9gQ2T8DuE3BGSAiHIs2ACQZpALpL32gA0BGaCX/5w4A0C2S/vsB9MwTSAvEOUCXglXeACCDAEHIDQgSTYABRNrACgQcRlAdEyAMLo4SWlhhAEA40OXr2fBYpwAAAAASUVORK5CYII=", "i:cobaltite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABIUlEQVR42mNgGDKAU8j8Pxuv5n+SNIk7rAJrAmkOm/4LjEFsvJok3bb8F7Nb9h+kOXLW7//unV/BGrOW/wFjrIbI+B/5D8O29R/+B07+CdacvvTP/5RFf+CaYQagGALSVLXl3/+khX/+F6/7C8aJC37/T1vyB25AxMzfYAzSCFILwqKqSRBDQAZ4935HMQRmAMwLME0gDDJIWCn6v5JZAyRQYQaANMMMcev4gqIJZIiUdi5YIwyDDOAUMkM1AOYSEAaFA8ggIYWw/3p5z/4LygWDNYIMAmlGMcCm7gPcAJAXzCre/reqeQ/WDDMA5HRkjWDNyLEAMgTmEpgBBoUvwa4AeQGmCUUjelTCDAEZANIMSguwxERUyoOlBVhiGhqZDAAsv0dTG/ZtgAAAAABJRU5ErkJggg==", "i:cobaltite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAuUlEQVR42mNgGHRAUL/lP1Zs0AbGBDUHTv71v3n3//9iailwNoiee+r/f1HrRfgNARkA0igXcua/tM9+MA3SXL7p33+9/Of/ZfwOETYApFFEORasWcJpLdhAkO1EGcDGq/lfVr8EbABIM8z/II1EGwDSzCftDdYIdxlQE8wbBA0AaeaVcP0PYiMbAPMG2QYQ7QKQZmwGEB0GIM1cIjYYBoA0E0wHIE0gzdgMAGkmygXIGNkAZDy4Mh8AphHFzi4aAxIAAAAASUVORK5CYII=", "i:cobaltite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAl0lEQVR42mNgwAEUTev+g7CEywYwZiAFgDQeuPf//+yT//+XbvgLpkk2CN0FMMNAbDmDMtJcBALijqvBBgjKh/7nEXcm3QBeCTewZlHVRDAmyRCQZiH5sP9svJpgjZJa2cQbgKwZJgbSTJQrsGmGGUAwLHBphhmA1xv4NMMMAEUlVgMIaUY2hGzNZDmbdppBAKSRbM2UAgCof3xSc0QMFgAAAABJRU5ErkJggg==", "i:cobaltite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAzklEQVR42mNgIAOIq6f+h2GyNMsGnfyvlfHgv6JpHWkG8Ig7/5d03/pfyazhv3Pr5/8SLhv+YyjAp1lQvwW/ZjmDsv/YDIFpFlNL+V+15R+mZrjztLIxDADxxWyX4tcMt0U+FMUAmGaQOF7NMMWiqolwA2Be4pPy+n/g3n/8mrF5g2TNyK4AYZCzSdKMHhalG/6SrplTyALsdJBGkAGzT0JcAMKgVIc35cGcD7MVphFkCMwwkJcwDAFphAUaNicTdAHMzyT7F9nfMFvI0Q8ARNnCKuCu3fYAAAAASUVORK5CYII=", "i:etherite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABBElEQVR42r2TOwvCMBSF/f/4AxwER10cFFwUBwdBHHRycNRBBx9IfbS11egXOJI2rW4GDmlv7vnubZJWKv8Yu+XaxMer1SNMzDNKjUmfpjQ5/96t1j0B8cxUYFEQmVfTRUbE6CRjhsjC/XT7QJjnnaFZ9MfWmF5i+0ycYh8zNILhPjCTVs/M3iZVBoCSILRm1j2AWidpUGvaJFXFTFejRtvGBcjslQBKctvGTExrnplx3R7tAtXVMgC3MnOh2QWoRZScIwvJV/4KUDK7rX0gRmfuHfj6CUggAHyOYsg95kIARs2uGRjH7B2hxmVzyEAk3jFzxKVX+Ne9l7zrWwbJS39iUf4LQ0sycyKEkDAAAAAASUVORK5CYII=", "i:fulgurite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABEUlEQVR42mNgGNTAyYTjPwyTpTHYkfv/3EaF/9tn6hBvEEjR12cTwBqzQgTg+MgKczDGawhI8v+PE/+nVcv+Xz9R7f/yLuX/HXmSYAPivfn+50cI/r+22x23ISCJn28WgzX3l0iDNT8+Hf3/7a2K/8l+/P/DXXnAfKwGgARBCkG2wWy+tN0FbDNIM8hbIDmQOEgdhiEgAZi/QYEG8i9MM8hmmOYJpdJgw7AaANIIwjA/ZwYLoGgG2QxyXR/Qezi9gUvz1+eTwOHy4nIW/kB8ciYWRTMoVkABC7IZFLhTq2QJRyXIFpDmH68X/K9KEvlflyr6vzJBBJywiE5MIPz+bu3/pgzx/4eWmVGWpEnWSAoAAD/0/P4AYkwqAAAAAElFTkSuQmCC", "i:galena_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlElEQVR42mNgGH5Az8juPwzjE8Op+ezlu//L63oxDJg2dw1YDq8hMIW4DEAXx2qAp3/M/4i4HAwDQJrRxTGAvrH9/9DozP8F5W0YBoA0g8RBavC6YMO2wxgKQWyQGMh1OF0AkgApmjB9GU4DYHIYhsBshinA5gWQGEwNiEYxBKYAZgs2Z4LEcFmAklDwhTKx6oYYAAD61bH8KLvkgAAAAABJRU5ErkJggg==", "i:galena_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAuElEQVR42mNgGDRAz8juPzImSR4kcOzMdTjGZcC0uWvA8iAaRQ3MAJAEDCMrQNZcXtcLxjgNgCmAGYLsOpgcVgMi4nLAEiAaxoa5Bl0zSB5rOGAzBNllMHFsYQQ3xNM/Bq4JRsM04gpgONA3tv9fUN4GNiQ0OhPFCzDDQGrwpgWQZpAhE6YvgxsC0wySI2gATPOGbYfhhsAMBWGiDABphhkE0wjDeMMAZgjMBeiGENSMK93jyh9UAQCAPzqL5H4otgAAAABJRU5ErkJggg==", "i:galena_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhElEQVR42mNgGJ5Az8juPzZMtOZpc9f8L6/rBdMgfOzMdTCfoCEgBcgaI+JywJqRDcRriL6xA1wxSDOMhhkI4oPU4DWgoLwNrAnEBtEwNswwAgbYg20CKcKGIS6wx29AaHQmWBGmAQg5vIHo6R8DDih0A0BiIO8RFRPYbAGJEZ0WRhgAAPSOnipho0QHAAAAAElFTkSuQmCC", "i:galena_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAArElEQVR42mNgGLTA2s71PzImWfP6HWfgeNm6g8QbAtPc0DYVjGcu2AQ2ICWz9L+hscV/ojWDNMI0g2iQGEFDkA2AOR1Gw1yE0wB0zcheAOHw6FSwC0A0VkOQDYDZCNMMwj4BkcQZAMIghciaQYaBDABpxmsAsl9himEYZCgIgwzCGQ4gCZhmmAYYhonhjQWQZElVO04DQN4hmBZACkDORI8FohISsiHYME0yHQA1zBp9cSZIhwAAAABJRU5ErkJggg==", "i:galena_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAo0lEQVR42mNgGHRAz8juPz5MUHN5Xe//aXPXwPH2PSf/33v8BswGyeE1BCQJUgjSADMIWXNEXA5hA0AakA2AaSTJAJCzYc4FYWQD9I3t8RsAU4xsE0gTSNzTPwa/ASBJkCJ0m2DiBeVthF0AUgjCyC4AsUOjM/9v2HaYcBiAbAEpRjcAJA7CBA0A2YKuECY+YfoywgaAFGEzAJs4wWRMSHxwAAAS4N7/WkXJUwAAAABJRU5ErkJggg==", "i:galena_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlUlEQVR42mNgGLQgJCLpv49/BAomSXNmXtX/uORcMN01ceH/1ZuPgw0Ji0r5D5InywV7jtz6f/nOV+IMQAcgm0EuiorLJM07yJphLoGxidaMbCuIBnmDKANgNju4eMMVO7r4gMOCoAEwm5E1gwCID4oZUKwQ5WdcUQyKWqyaQZpACvA5EWc0EqMZJyA5erAZQLZmSgAAxIWT4MtuypIAAAAASUVORK5CYII=", "i:galena_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA1klEQVR42mNgIAN4+4f/h2GyNJdWdfxPTCv87+Di/Z9kzZl5Vf93HLj2v7V79v+QiCTiDXBy9f3f0Tfv/+U7X8E0Ts0ghSCMLgZytm9AJJhGl0dRuOvwDRQFIDbIvyDNIBqvZpDf0DWHRaWAnQ2icWqGKV6x4QhcEUwzyEUENcM0BIbGg0MXxga5iCTNMBqEQdEFchHIQKKiCNnpsEBD1gyKNoLxDtIM0gijYWz08MGp2cc/AsUlIK8gG4TX+ciKkMMEW8LCMAAUYOjxTzDk0RUTrQENAAAIMN+vmkvEIAAAAABJRU5ErkJggg==", "i:givrium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABD0lEQVR42mNgGNSAT8/jPwyTpVHYMvy/UeHs/87tm4k3CKRow4NvYI2SnjlwHDT9IBjjNQQk+fDb//962VP/W9ev/m9eueS/ekIH2AAxx6T/0r5F/1NXX8FtCEji4IufYM1aaX1gzdV7H/2fcfHtf3HXtP8iNtFgPlYDQIIghSDbYDYnLr8AthmkGeQtkBxIHKQOwxCQAMzfoEAD+RemGWQzTLN2Wj/YMKwGgDSCMMzPIBpZM8hmkOu0UvtwewOX5o3A0AWFS9eJF/gDsXb/IxTNoFgBBSzIZlDg6mVPIRyVIFtAmvc++/FfPrTmv2JE/X+5kCpwwiI6MYHw3Kvv/ytHN/0PmLqfsiRNskZSAAAm7P/Qsn8fsgAAAABJRU5ErkJggg==", "i:ilmenite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAtUlEQVR42mNgGJRAXEL2Pwjj4hPU7OYdimGArZM3YUNACuKS8/87uvljGGBoaguWw2uIoKDof0tbt//Kqtr/QWxkcZChmromhA0AaRYVk8IwACQGMpwoAxLSijAMAImhuwyrASCngvyLrBAWsCA5nAaAFIGcqKSsieFXWCCCvAFyCYY3YApAtoAUqKrpYBgAEoO5Dj2awQpAtoIUgFyAKyGBXAhSh24BXAEI4wskkByyWobhAQA7iIcLBPJbGQAAAABJRU5ErkJggg==", "i:ilmenite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA30lEQVR42s2SvQvCQAzFOxccOlTFj0HEQaSIYAfFDoJ0cXByFUFwFfz/4eRXeOXu+kG7GQilSd5L8nJB8DcWhgMTRXHpfl5x6vAKOL/ezTrZm+f720hA7vH6mF2auTX8kDhkuVmuNmY6Wzhd1J34Ob/VEwiMUyQSGyxyah0CFSrJOkzEyMfTxQHHw0mx6mg8N7Ui0l1gAJ3AvpiAtY5cBI1gjCQCMYUPFkHlhHUE6KDR7e5NJy4t2aYFmGJcnXU+tGldgfEQCRIAIuFLrFVA+03YZ+wF9k/KSnr/ncF97QcJecVhat6gEQAAAABJRU5ErkJggg==", "i:ilmenite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAkUlEQVR42mNgGJ5AXEL2v6CgKAoGiRGtWVVN57+bd+j/uOT8/wlpRf+VVbXBYgQNASnQ1DX5b2hqC9ZoZeMC1mxp6wamQYbiNQTkVJBiRzd/sAaQC0CaQAaCxEF8kBq8BoA0SssoYoQByCCQIQQNANmOrhmGQS7BawAsDHAZAJMjGAO4DIDJEZUGsHmPoOYRCgBb3W86cPMSAAAAAABJRU5ErkJggg==", "i:ilmenite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+UlEQVR42tWSPQ8BQRCGr5YgXHwc4RS+ChHREYWC5jrFRUJFQaXy/1Rqf2l5RmZzh4uPzibv3e3MPu/O7K3j/M1w3ZJBP0Go1emJ3pq8gtB4MrNKpdImEZpMgxi03hzM6XyxsOasCdBiuZXgYDiSRfMgNOFqZzb7YwxC5FC727+baKkEo6VGIczIUx0gTN1v3g146O4stNB6J+VTBTkAVaIBbwBA5n6jZcpeLSbOQ82tQaXasAZJIDGtoFDwRNYgny+KyaMBffON9BwAs1lXJAaZTE56UhMkZd4AYiqFOEjA2F1gwq/U3h4h3e0JjA4Sepk+hl6ZfAtdAWVf+Bj9eKXdAAAAAElFTkSuQmCC", "i:ilmenite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAvUlEQVR42mNgGHRAXEL2PwwLCorCMUyMoOaGtkn/3bxD/2vqmvxPSCv6r6yq/d/RzR8sHpecj98QkCRIEUizpa0bWDMIg9gwQwkaAFIEslFaRvG/qJgUGIPYIDGQHMg7OA0AScKcDdII8z9IzNDUFuwKggaANINsRFYIYsNcgNcLIIUwp6MbABIHuYQiA9DFsRoACzh0A7CJ44wF9PgGacImjtUAUEiDAkxX3xTFAGziOJMxSBG6AdjEBwcAAHXMmhgH3eNEAAAAAElFTkSuQmCC", "i:ilmenite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABNElEQVR42p2S30sCQRDH71kIhPMw60iEiBKCqIOM0uQeQrFE8KHEfkBUYNhDPaQvRk9Br/3DE5+FW9bd4zpaGHZ3Zr7f+e7seF6OtR7WxLQ8GK8UVAQD0Ix7cnB4qvbeYPw3SXk1lI3qplRrW1IorCjjDjC5Q54J3q7vCWcq7+xGUiyWFBAS/Jwp4BDgjBptnZT4IQF89/iqyfvD23SC/ehYJZn+k3ZXVwWMzRbfktpxmM1Gdfsjmb59yFHrTKkjTg8cBYA+v36W3ta5uJKH53dpxefahzqIyHXkm9KR+TSdq8pmHjkosJ/pqLm+f1E/Yhchxp75lchjt3+BRvp+WcVSCQhc3kyWmsiZeQiCNT0X5hfrxbAwrmZlwIxvMoGJCgeME3ZIbH8qwE6iWTY49wL4X/AvD9G33G2bvDwAAAAASUVORK5CYII=", "i:ilmenite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA8ElEQVR42mNgIANwcfH+h2GyNIuISIAxyQaANIiLy/yXk1f5LyAgQpoBIMVS0gr/jc3tydMMstnWyZt0zYKComD/hsdm4tesoWXwX15RDUVSXALi34a2SYRtNrFw+O8XHPdfWkYRrAhEgwyNScoFGwIyDK9TQbaDFII0gRSDaO+AaDifKP+CXGBkYg12hZWNC5xNUlyDbItPLfwvIipJvM0wYG3v8b+8thMcWCDnCwuLE+8CGwfP//WtE//rGVnCAxEU8qCEo6lrgtsQUMCBAhCkwRzob/QEBNKM1xWgUAb7GZhYyMmZ4EADaSY5tKEAAOnvfO7NxEjEAAAAAElFTkSuQmCC", "i:infused_ascensium": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABEUlEQVR42s2TzQ7BUBCFPQMbZaGs1IqdqNi0G6y1WzydnzfBxs9b+FmTSMb9pilCSe3c5KTpvXPOnDm9zWT+duWzBXlFarKVK8peror55SR+MBJ/MEwnQlGwWYpjOwY1ccoRgu1SbKssiKcih7uVTM8nmRmw59ZdFSnlP4goeUthS8mesa0Ix+I3Pel3unrGKJPz8V2EjYOZmSLmjgX6nZ4KsI8L4IWj9zwQwDIFGpzpBBlAJo/4HMFEB5AoHqwXavm5M0H6wVCqJh/eEx1gmfnbDfdunc6QyMJRcuQm8ZMiQqfHvFGg3IO4MyJf7wOHiNARIAIZVzxtqyKpbiKBMXOUg/vZ9jeR+B/g8vxE/mXdAFYW8awo31BPAAAAAElFTkSuQmCC", "i:malachite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAqElEQVR42mNgGH6ATY7vPwzjE8Oped7PKf9F/JQxDICJ81lJ/8drAJ+N9P85PyZjGAATJ2gASFHA5QgUA0CaQOLWB7zwGwCSBGkGKUQ3ACQGkiNoAEih7ioHFIUgNkgM3WUYzucxEgcboNBghGEASAwkj9UQkACnpjDYFrDtwABD94JoiCpcHsMQEAdkAwjDohDdAGRXgGgUA2AKQBhfYkFWQzBRDR0AALRJkRC9OtRxAAAAAElFTkSuQmCC", "i:malachite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA1ElEQVR42s2TPQrCQBCFtxIESaNiIYggFrYpxTOIhYXH8Q6KlYh38jLGZuQpH8zuJtFGMDDs33vfTGbZEP7iK5ZjU3QmhTFv0qBTRIfn+8EG65ltbrtGwPVxskt1tF45igGvzKs3ZLid23RfRhDNtYdZuiiJFsrMoYRAMPvzrAKJyCwBpRLaEwBId9HPAUAkUi9kIjDLKE3WxLQXGsmGWcYscx1AIiCMVKZfbAXQTEF8BQIBqLvikF4XGX0AbQVQLhAahvljD1II8bXZQ3gXfvzJQ3wCgfL5Az/8TDAAAAAASUVORK5CYII=", "i:malachite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAkElEQVR42mNgGJ6ATY7vPwjzWUnDMYhPtGYeI/H/In7K/wMuR8AxiE/QEJACTk1hsGIQveDXNLhBuqscwGJ4DQE720b6/7yfU8CaQWyYYSADQBjkHZwGgCRhToYZBrNVocGIeAOQAw45MEk2AB2DXEHQAFAMoEchDIuGqOI3ABaQ6FEGix2S0gK6AURrHnoAADWZgtXMLuirAAAAAElFTkSuQmCC", "i:malachite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAj0lEQVR42mNgGJSATY7vPzZMtEaPM8H/tRbZ/pct1gdjlSkW/8XjNAgbhE0zCIsEqKAYgtcAZM0Lfk0DGwjCMEMIGoCsGWQYCIMMEPJQJM4FMAOQvQKymVtfjHwDQM4n2gCQIpAm5LCAGUBUGMAMgGkEYRAbFAZEGQBSiGwrCMMMIcoL2AwhOiFRnJQHBAAAUlOzo3K0pVMAAAAASUVORK5CYII=", "i:malachite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAnUlEQVR42mNgGHSAz0r6P5scHxiD2DAMEyOoWXeVw38+G+n/In7K/+f9nPJ/zo/JYDEQn1NTGGwYXgNAmkEacGGCBiArVmgwAmMYH+QKogwAKQRphPkfxAY5nygXIGtGNxhkCN6AhCnEZQCPkThlBqCLYzUAFnDoBmATx2kAemjDwkY0RBW/AeDUB00HyApB4qAAJMoA5CRMSHxwAADtLabwHSPmegAAAABJRU5ErkJggg==", "i:malachite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAqElEQVR42mNgGLRANET1P5+VNBizyfGBMUmaF/ya9n/ezyn/Ay5H/OcxEv/PZwMxiFNTGIxJdgFIk4if8n/RULX/IDmyvARyjUKDEdhQkjSDbAd7A+oikEFEeQMEQM6HaQbxQTTIK0QFKkgRKPCQbYOJETQApABkE7pTQWEBih2QIXj9DAptbIEFi2KQt7BqhgUSvpDGGY0gTWDnkRpNxNpM0ACyNVMCAFe3a/DUYRh0AAAAAElFTkSuQmCC", "i:malachite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAx0lEQVR42mNgIAOIhqj+59QU/s8mx/efLM2yxfr/JZK0SDcApHnBr2n/dVc5/BdwliPNAJCTYZrn/JhMmmYeI3G4ZoJOB0kiKwBpBmkiqBkWqgoNRnBFID/P+zkF7F+8zgZpBtkEUgjSRJJmkARIM8wQkCaYZpBrrA94Ee9nkCEi/ipgzUQFGK64BmkGuQamGT1g8boGpBlEg1wCMwQ5YPFqBmlCtxVZDKdGkN/5LKUwFMICGK8BIM2gQAPRJGtGdgE224kJOAAygabtQeffIgAAAABJRU5ErkJggg==", "i:platinum_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABH0lEQVR42sVSPU/CUBTtD2Vw7EDiInFhAxMd4Qe4uDqxEBecICESqRq/ooTUYvlqS01JE6ZHzy335tG0xMX4kpued8+5597cV8P4i9PtW+qm01N8B0buV8V3wxdVOjIpUNhq38od3MHi+8c3EtYvmvT9nnnq6fVzLwfNwc7oyuKF/6NGtkv48upa8gMrZ5KH5w/pBBNgbxUpx10Srp03xADaQgMIGfvhWrlzn/Bp9Yy4QoP30ReR9mROYuAgMZguAjFYxxvC0BYaQHR8UiUcRnEyRSQGMM814GKIEGygT4AcRmdOTHjLerFZrqQ7SJaIpwRGDhwWzCaoFQMk9WLeB/O6hl9pz0CPsTNNyd0BRi6rEw0L0BFR9Kcyn23wv2cLqXetyQ0eClgAAAAASUVORK5CYII=", "i:platinum_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABFElEQVR42q2TMUvDQBiG+0MdHDMILi0u2URw9Xd0kS5tF7NIBnUJIh0kgVIIlEoJ0qKicvIcvMclucvkwUu+3ve8b7/ctaPRf6xyXRu0qXdm+9aYfXMwXYY9eggO3plPTpOe/BDqEGNDnlel/bC8y81FemXOx2k04OfXtJheAA10eX3jQj6+vm3NHub342c4gM3i5dU+ARUis8IxBQNQcjaxITQIkWSmByO+6gYgDEAaVWKP1/TZSjcBrCYBmoZD4ymzRqfG07rnp2LlzkIhvjQFNWzvx5Q/FA70D03SNDCw0QBBGl3n4fcGA3g/gboR3xwNYGX3jy5EVybJDDP4x9IkIUW/ubuYYDbPzPR2YUXNXoj9A9j2AixI4Un/AAAAAElFTkSuQmCC", "i:platinum_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAv0lEQVR42mNgGJTg5t1H/5+/evf/09cfYAxig8SI1hyTkIEVEzQEpjkjp/R/eU0rHINcARLDa8ipc1fBCnbuO/Z/3uI1/5s7Jv6/9/DZ/7tADDIkv6QGbghILYYBII0gSZBCEPvi1dv/WzonwTXDMMwSnAbANCB7AeYNog2ABRrMIBgf5CWcBsDCAFkDyM8wW0EY5C2cYQCLAWQN6Bjmypt3cMQEsiGwEEfnE50WQBiWGolOSOhJGcYnKSnTHQAAe9xBGrURGv8AAAAASUVORK5CYII=", "i:platinum_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABGklEQVR42sWSTUtCQRSG/aEuWoqbFi1yYYTSShHBhQZRiLarTYsURBFEkAgDjYorftANNS5cNfETlZPv0Bnu5JVsEQ08m4HnfWfOjMPxF+vA4yOvLyBw7rkEO4nu/UOC3HjtUH84ltSabz8HQYZomB+k1fUNqs91uknl7UNYBtPZgmbzJZmDkURvG0KOnl1SIHxKxych2ghAM2TAEvPwqFGucCdkBCkB3F66ryoyJAbybaYgZEaGHPmDMqBr9JRGBjL2ypUXIWMechbWgCetpTQy2MPJ2u8mTdanVAI4BHI6W1QaGR6mrcwBkM8TVxSJxYXU1LsCq7xc0fan5BC+hpXpV7Nt+/cvDKxPyEP91ZdGyEXyWrKz+C/rE9nb27SQ37SzAAAAAElFTkSuQmCC", "i:platinum_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA90lEQVR42q2TvwrCMBDGfVAHxw6Ci+LSTQRXX8DF1RdwcRFEHBQRB5GC/9BS22qVgoNy8h1cCC1NKxj44Lh890vuQkqlf69H/KJbFNM1jOjk+izEyGEvt7hcsYzKhNwfMRtanS4NRxPq9QccQ027zbKqDfbAmwIE96cCCEQKRbW6zR54U4CLFyoAzMv1lgugJADeTIBeLH0jfn+oGMDZnxmCeDZfcysCliEbATDJSRvnQLujq8CFW8B1BeAFEcd6W0aADC4JQA6QQgB578VqQ/7tqfIyDyMAxTpAboBcIYCu8XShhqgr8y8AIkL/kkeMHF4o90P9ur5HVMNjaJJxgQAAAABJRU5ErkJggg==", "i:platinum_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAyUlEQVR42mNgQAJd/TP+w3BMQgaczUAKAGl89vLd/8vX7/7fsvPg/0PHz5FnCAzfvPsIxRCYy0gyDOQaEAaxX7z+AKZJdhHIFQuXrf/f0NpHmmYYqKrvALti665DpBsC0gByAciQi1dvgw2pb+n9T7TNoICE2QrSSLQhIAUghSBD0MVBhuA1YNb8FTgVgeQeP3v9H0Tj1IxPAUj867ef2OUJmo6kDkMNzM+ENCMbAg/pwrJ60qIHPZ5BiQRkCFmpDGQACKNHFzEAAA9X8O52/zHYAAAAAElFTkSuQmCC", "i:platinum_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+ElEQVR42p2STQuCQBCG/ctdOnSxQ0EE1TW6dO0H1KFueekWRN+FEUaSiZJUQlBMvGsjIqJrC8OsyPPszDCKkuN0uj2KRy746b/CeH9IXqBWGmRaLrneI4TxLSUoqTXy7j6tdkcBMXwy7WwBYNNyxKsQAF5sDgLOFJSrTfESBKgA8Gy5DwWpcL3Vpot9+wmCsgcjTQiQE2FAnLe6QfO1LiLo2QkFaCsR1iZTQu4Px+IOCWBIjPNVCBJh7hdAHEZGoJ1CUU2fOEsgYJhl+Ce1MFEJAhXxbKRg9BttRwrGmqI/DIlLjVaSKYEAixEfEiRSFWApIEEof5wvYgiIHwMZwTAAAAAASUVORK5CYII=", "i:pyrolite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAzElEQVR42mNgwAP+z2n6D8IM5ACQRjcmDjAm2pD/xTH/YRimEWYQWLyjAIzxGoBsKxwDNcHFiTEApOlvjDsYw2x+qKoIdwlRmuHeATkbSIPEcBqCoRndBUC8jlcUbACIxjAE5keYn0EKkQMUZNAJMUmwZrgByGEBD2mgIMxmmGIYBhkKwiCDsHsDaAhI4RsDNRQNMAwSg3kFZ7oAuQCk4JWeKjzQYN755moK0Yw3GqEGgDC2QCTKAFi0wZwK8xpRKRHdMKJSH81yI7EAAMwITWRIBjWfAAAAAElFTkSuQmCC", "i:raw_bauxite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgUlEQVR42mNgGLTARITvPzImWeMkOzUw3hFjBaaJMgSmEaQJhK+1xPx/c2cT3DC8hiBrBmmE2QzDZ3b04DcE3XZ0A/C6ApufQRjZ+XgNQTYAG0Y2NElNArcBMH+ia0YOE6wGEHIFQRfADABJgjAu/+PUjMsQZI0wzUQnKGx4cGY6AAyq4PWR/U6eAAAAAElFTkSuQmCC", "i:raw_cassiterite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgUlEQVR42mNgGLRAio/jPzImWWOIiQIYl/kZgWmiDIFpBGkC4XkFXv+vbaqBG4bXEGTNII0wm2F4W18SfkPQbUc3AK8rsPkZhJGdj9cQZAOwYWRDTeSEcBsA8ye6ZuQwwWoAIVcQdAHMAJAkCOPyP07NuAxB1gjTTHSCwoYHZ6YDAMBNwLfjwGzVAAAAAElFTkSuQmCC", "i:soufrite": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABGUlEQVR42mNgoAe4tFvp/7t7rmD87XXm/+9v8///+tTwH6didH5GGBsGBhmCoRlkA0gSZghM865FoigYJAZyCYpmkIkgiQ8PveCGgOjJtTz/F3YLgDV+fhYFZoPEQZbBNYNMAwm+vuXwv7OEG6wJZjOIDcKfHgeBNYPkMQyAOf3jI///ZckcYEUwW0GaQa6qz+YEi8MMQAkrmAEwRcjOBmkGicHkMDSDwLPL5mAJkO0wJ4MMQLYZRGPVjGwAzIkg/OlJKNgQdJvxGgBTDAptWDiAxEAuQ04DeL0AwjCDQAaAvAMTA2HkaMZqAEgjjEbWDDIMFM0YUQgDTy+aoBgCwyA+SDMoinEmYULpHoYxki8uQ9AxLCdiUw8AaK2Hn5ZzQw4AAAAASUVORK5CYII=", "i:wolframite_boots": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAfUlEQVR42mNgGH7AhE3uPwzjE8OpeYl46v9u4VAMA0BiIDm8hsAUFgi4YBgAEkM3GKsBIIURPCYYBoDE0A3GagBIoT+3PoYBIDF0g7EaAFLoyaWN1QB0cQzNIAW4DMAlh1WBE4cahgEgMZyGwAzAppkoNcgJBV8gEatuiAEABj5946oRNfoAAAAASUVORK5CYII=", "i:wolframite_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA4UlEQVR42mNgGDTAhE3uPzImSR4ksEQ89X+BgMv/CB4TnAZ4cmmDsT+3PqoaEKdbOBSsGSQJUoSsAMR24lCDa8ZqAEwziAYZBjMEphlmAUwdhgEwG0AKQN4BafhfeATsLTA78wDcEJBarOEAswmm8X/1SbCG/8l7weIgMRDGFkZwQ0AKQAaBNIOcCjMEJIYrgFEM+J9/GKwJbEjdabC3/jecAYuB5AgaAAtlZBfAxNBjhwFXXMNdALQZZggsDRD2AjC0YYphBoHZQHGsoY/NELgmYGzADCNKM650jyt/UAUAACDx7veX98uSAAAAAElFTkSuQmCC", "i:wolframite_helmet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYUlEQVR42mNgGJ7AhE3uPzZMtGZPLu3//tz6YBqZTdAQmOZMfvv/3cKhYBqEQQYQZQhIEqQQXSMyJsoAmE3ImmBeIcoAXIFIlAEw27FhosLAiUMNpwEwOaLSALHio4CBAQCNW2+1hzFgwwAAAABJRU5ErkJggg==", "i:wolframite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAoklEQVR42mNgoBd4qz/rPwiTpQmETdjkwJigIdg0gXAQtwEY4zUEXVM+vzMGbhMOwm4ITDPIFmwa8RoA04xPEwz/bzgDxnBDYJpBgiAF+DSBMEjOjkMF0wCYQrimyO1wDNLkxqkJ1gjDWA0A+R+fJhAGiQVzG+I2AETj04iiGTkAQQqwGQBigzBy9OKMQpghuDThTc7oiYgoTfiSMckZh1wAACO9Nnh+afc8AAAAAElFTkSuQmCC", "i:wolframite_leggings": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAeUlEQVR42mNgGHTAhE3uPz5MUHOBgMv/buFQMAaxQTiCx+S/P7f+fycONfyGwAxA1gjTDMKeXNrEGQDTCNIAspUkA2A2whSDMMwQogyA2YasECZOtAHoCulrAEgRNgOwieM0AD2+cYljNQCkCJsB2MQJJmV8YoMHAAAucJQ7Hl+XBgAAAABJRU5ErkJggg==", "i:wolframite_pickaxe": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA20lEQVR42mNgIAL4cOn+B2GCCu04VP6DsB+XHlyxCZvc/yx+B8IGgDSCFIJwGI/xf5BGEIaxiXEp3AUwjVWCXmC2K6cGcQbAnIzsApCLQrgNiTcIpgmkGGZQpaDn/ygeUxQD8AYszM8ww/pFIsCGgAIXZAjRAQtSfFK2DqwYpomogAUpAGk+K9cEtxGmCWYIQZu3SOaj+BndILw2X5RvgQcicljANINo5MSGovl/wxms0QWLVliCA9EYzj4n34RiM74UCzcAZvNS8VSCmpENwWozAzkApJFYm7EBAI6esoR+/2APAAAAAElFTkSuQmCC", "i:wolframite_sword": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABDElEQVR42mNgIAP4cen9B2ETNrn/JGkEaQBp3CpZ8P+cfBOYDZe041D5T4wBk0Wi/i8VTwUbAjcApDmL3+E/NkNgTgXhKwrtYJtBhmDYDjMAphjZ1iQ+a7Cm/w1nwDajqwHbEsZjDBYE0SDDYApANIh/Ub4FbAjOgINpBtGunBoomrdI5v+vEvQCuwSvATCbYQaB+GflmsCaYc5G8Ts222GGgOiTsnUo3sEKfLh04YpATgfZUCno+b9fJAIjLHAaAMIwPsiQKB5TsCEwl4HECLoEORxAGkK4DeGakL1IMJXBFIEMAbFBAQjTDEonGIkN5HzkwMMWsMjpAyPFIgciPjFQ4OJ0AXpAovPxAQA6D+HS8XHU4wAAAABJRU5ErkJggg==", "v:compass_16": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAm0lEQVQ4y82TyQnAIBREU4SQdOHJMkI68GQlVmNJdmMYYYLLZDnmwyD5zjzitiy/LOdcUfocTClVxRiL9/4aH0Hbul5mmKy1ndDDPASvDKtgMUaCOgg+VFgBCPkEOPa9AkII7wBs2h1kDGOfJgCaLLUUCB4IUAnIOVex8Ffs8SgRngDtMhhgiHeCRyjDLaQFjQDOv95IGkf98+Gdcg8P7woSafoAAAAASUVORK5CYII=", "v:echo_shard": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAGFBMVEUAAAAp3+sAkpUKUGADQVAFKjIRGyENEhflIjUTAAAAAXRSTlMAQObYZgAAAFZJREFUeNpjQIBQKM3qnAZlGCsnQBhOQmZgBluYsmsChJHqEgYWSk0LdikAMdjNnEzcwUKlKSkhEKGw1NBwsFBJmqs5A0RVsnIBmFXkagJhsJeXIxwBAPgZD+HK8EObAAAAAElFTkSuQmCC", "v:heart_of_the_sea": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAG1BMVEUAAAAdwtEflrEhgKEdbY0PWHUNSF8LOk0IIFSR1f/0AAAAAXRSTlMAQObYZgAAAGdJREFUeNpjQAYuLlDaSBnMYjFSUlJOADKcFYWUlM1gDHeIjJKxawEDizGQNnYpYGAPMTY2NnFtYGAvT3VxCesoYGAoKy+v6MhgADJSQ0PDKoAM9rTQ0PQGBiDoSC/vYGAAszqQnQAAU3AWMEUVqKkAAAAASUVORK5CYII=", "v:iron_chestplate": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjElEQVQ4jc2R0QnAIAxEu4ZDOJn7OJIzuI3lfVxJa1LSvwYOjLl7SDyOX1StdT31yUNDzTnXGCMEhB4aDVDv/WbgzJ31bAANEEZBFLZzF9Bau4x6qmSDePDeAKWUhRhEQQmP/NtvcPkWRm7QArQDL8zzU4BIKYC3cYVTAP2GJy0wBLxBUmEL8ZQKf60THqBitQbYAN8AAAAASUVORK5CYII=", "v:iron_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhElEQVQ4y9WSwQnAIBAEbcpefFmEJViNJdmNYQ82OeVUzCdkYfEgzhhinPtNYowNfQWhpRRpSqkdQbXWrqZkBy0lgJAdxDKYRcJTVxIdgmC8949glIxQzllAFLMpoMSCWL33FtDID7gC8QygwPoWKLFeV0MdOF4lJVhDCHto9hMdQZ/nAqzufev6TWmcAAAAAElFTkSuQmCC", "v:nether_star": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAHlBMVEUAAAD9/6ja4uLg4nfL1ta5ycnS0gCIpKRkkJBVa2uOynhjAAAAAXRSTlMAQObYZgAAAEpJREFUeNpjwA4aoDRHJZTRrj4BwmgVhTA6SkQqQSyOUhcR10qQCkXBZMHwCSARV9NwsL6ZJaKVENVTxaHap7tDGZyVDFAwAdliAFlNENjnSBVaAAAAAElFTkSuQmCC", "v:netherite_ingot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAABzcXNaV1pNSU1IRUhMQUM7OTs8MjIxKSonHB0RERGQLp7qAAAAAXRSTlMAQObYZgAAAGNJREFUeNpjwAFmQijOmaENYO4UZ9MIENfFSEnZpIFhUqipsZKSoAfDVCFl40BBjyyG6YVKgiIV7VkM09IE3Ts60oAiaW4dHWVVCxg4ytw7ylctYGBgaE/vWsUAAhxdC7DbCwDOnxpNtnrV5wAAAABJRU5ErkJggg=="};
+const T = k => TEX[k] || "";
+const img = (k, cls = "") => `<img class="px ${cls}" src="${T(k)}" alt="">`;
+const slot = (k, cls = "") => `<span class="slot">${img(k, cls)}</span>`;
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const $ = s => document.querySelector(s);
+const chip = (k, txt) => `<span class="chip">${img(k, "sm")}${esc(txt)}</span>`;
+
+// ================= Les souvenirs d'Ursula, la dernière gardienne =================
+const conte = (txt, anim = false) =>
+  `<blockquote class="conte${anim ? " fade" : ""}" style="margin:0"><img src="${T("i:celestial_crystal")}" alt=""><q>${esc(txt)}</q>
+   <cite>Ursula, gardienne des sanctuaires</cite></blockquote>`;
+
+const CONTES_SECTIONS = {
+  minerais: "Chaque minerai a son endroit et sa saison. Chez nous, on disait qu'on ne choisit pas un métal : c'est lui qui vous attend, et il sait être patient.",
+  forge: "On n'entrait pas à la forge les mains vides. Ni avec des promesses. Seulement avec de l'ascensium, et beaucoup de sueur.",
+  sanctuaire: "J'ai gardé un sanctuaire pendant plus d'hivers que je ne sais compter. Les champignons poussent, les vaches passent. Personne ne venait. Puis un jour, quelqu'un est venu.",
+  celestium: "Le Célestium ne se termine jamais vraiment. On le nourrit, métal après métal, comme on nourrit un feu qu'on ne veut pas voir s'éteindre.",
+  commandes: "Même les gardiennes trichent un peu, parfois. Mais ne le répète pas.",
+};
+
+const CONTES_PALIERS = [
+  "Une armure de bauxite ne protège pas de grand-chose. Mais celui qui la porte a déjà fait le premier pas, et c'est toujours le plus long.",
+  "Les apprentis cousaient une plaque de cassitérite sur leurs bottes, pour qu'on les entende arriver à l'atelier. Les maîtres, eux, marchaient sans bruit.",
+  "La galène est le premier métal qu'on ne trouve pas dans la roche : on le fabrique. Mon grand-père disait que c'est là que commence vraiment l'ascension.",
+  "Les guérisseurs portaient la malachite. Le vert ralentit le sang et referme les plaies, à condition de lui laisser le temps, loin des combats.",
+  "J'ai vu un homme en cinabre traverser un lac de lave de part en part. Il est ressorti de l'autre côté en se plaignant seulement de l'odeur.",
+  "Nos plongeurs allaient chercher les cœurs de la mer en armure de cobaltite. Ils remontaient des heures plus tard, sans jamais avoir manqué d'air.",
+  "Un messager en ilménite a traversé une tempête de neige sans ralentir. Il est arrivé avant la nouvelle qu'il devait annoncer.",
+  "La wolframite est rose, et ses porteurs se faisaient moquer. Puis un creeper a explosé aux pieds de l'un d'eux. Il s'est relevé, et plus personne n'a ri de la couleur.",
+  "Les Endermen détournent le regard devant le platine. Je n'ai jamais su si c'était du respect ou de la gêne.",
+  "Les gardiens en charoïte sautaient du haut des falaises pour descendre plus vite. Les autres prenaient l'escalier, et arrivaient toujours en retard.",
+  "Je n'ai vu qu'une seule armure de Célestium au douzième niveau. Elle brillait plus fort que la lune, et celui qui la portait ne touchait plus le sol.",
+];
+
+const CONTES_EPEES = [
+ "Ma première épée était en bauxite. Elle a tenu trois combats contre des araignées, et je l'ai gardée sur mon mur pendant soixante ans.",
+ "On disait qu'une lame de cassitérite chante en fendant l'air. Les mauvais escrimeurs, eux, n'entendaient rien : ils étaient trop occupés à crier.",
+ "Avec la galène, nos gardes repoussaient les zombies jusqu'en bas des escaliers. Les zombies remontaient, bien sûr. Mais plus lentement.",
+ "La malachite boit un peu de ce qu'elle frappe, et vous le rend. Les guérisseurs détestaient cette épée : elle leur volait leur travail.",
+ "Une lame de cinabre ne s'éteint jamais vraiment. On la rangeait dans un fourreau de pierre, et on évitait les granges.",
+ "La cobaltite alourdit ceux qu'elle touche, comme s'ils marchaient soudain au fond d'un lac.",
+ "Même par temps clair, une épée d'ilménite fait tomber la foudre. Le ciel, disait mon maître, n'aime pas qu'on lui dise non.",
+ "Un seul coup de wolframite, et tout le groupe recule. C'est rose, c'est joli, et ça ne pardonne rien.",
+ "Le platine passe sous les plaques d'armure comme l'eau sous une porte. Les chevaliers du Nether l'ont appris à leurs dépens.",
+ "La charoïte sent la faiblesse. Quand l'ennemi vacille, elle termine le travail sans demander la permission.",
+ "J'ai vu une épée de Célestium fendre un nuage d'orage. La foudre est tombée là où son porteur regardait, et nulle part ailleurs."
+];
+const CONTES_PIOCHES = [
+ "On creuse sa première galerie en bauxite. On la rate, on la rebouche, et on recommence. C'est comme ça qu'on apprend.",
+ "Une pioche de cassitérite résonne dans les grottes. Les mineurs s'en servaient pour se retrouver dans le noir.",
+ "La galène s'use à peine. Mon grand-père a creusé la moitié d'une montagne avec la même pioche, et il ne l'a jamais réparée.",
+ "Avec la malachite, un filon en donne parfois deux fois plus. Les mineurs appelaient ça le pourboire de la roche.",
+ "La pioche de cinabre est si chaude que le fer fond avant même de toucher le sol. Ne la posez jamais sur une table en bois.",
+ "Sous l'eau, la cobaltite creuse comme à l'air libre. Nos plongeurs remontaient les mains pleines de diamants.",
+ "L'ilménite est rapide. Si rapide que les apprentis creusaient parfois un trou sous leurs propres pieds.",
+ "Un coup de wolframite, et ce sont neuf blocs qui tombent. Les tunnels de l'ancien peuple sont tous larges comme ça.",
+ "Le platine attire tout ce qu'il arrache. Rien ne se perd, pas même le gravier qu'on aurait préféré laisser.",
+ "Avec la charoïte, la roche devient transparente pour qui sait regarder. Les minerais brillent comme des braises dans la cendre.",
+ "La pioche de Célestium ne creuse pas : elle ouvre. Au douzième niveau, même la bedrock se laisse faire."
+];
+
+const CONTES_MINERAIS = {
+  "Bauxite": "Les enfants apprenaient à forger sur la bauxite. Elle pardonne les coups mal portés, et il y en a partout : personne ne pleure un lingot raté.",
+  "Cassitérite": "La cassitérite chante quand on la frappe. Un bon lingot sonne juste, un mauvais grince comme une vieille porte. Les maîtres forgeaient les yeux fermés.",
+  "Ascensium": "Une pépite d'ascensium payait une nuit à l'auberge. Neuf pépites, un lingot. Et un lingot payait le droit d'entrer à la forge. Rien n'a changé.",
+  "Cinabre": "Le cinabre dort dans le Nether, brisé en deux. Les anciens croyaient que la chaleur l'avait fendu de colère, et qu'il fallait la pyrolithe et le cendrium pour le calmer.",
+  "Pyrolithe": "On ramassait la pyrolithe au bord des lacs de lave, à genoux, une main sur le cœur. Ceux qui oubliaient le geste revenaient avec des cicatrices.",
+  "Cendrium": "Le cendrium a la couleur du sang séché. Dans les deltas de basalte, on raconte que c'est tout ce qui reste des forgerons trop pressés.",
+  "Ilménite": "L'ilménite repose au fond des grandes grottes, posée sur le sol comme si quelqu'un l'avait oubliée là. Peut-être que c'est le cas.",
+  "Givrium": "Sous la neige, le givrium garde le froid de l'hiver où il est né. Une ilménite réparée sans lui reste tiède pour toujours, et ne vaut rien.",
+  "Fulgurite": "La fulgurite naît là où la foudre touche le sable. Les gardiens plantaient des paratonnerres dans le désert et attendaient l'orage, parfois pendant des années.",
+  "Platine": "Pour réparer le platine, il faut un morceau du Nether et un morceau de l'End. Les deux bouts du monde, dans le même lingot.",
+  "Soufrite": "Dans la vallée des âmes, la soufrite brille d'un jaune malade. Les âmes la gardent, dit-on, par habitude plus que par devoir.",
+  "Éthérite": "Personne ne sait qui a déposé l'éthérite sur les îles de l'End. Elle a la couleur de la nacre, et pourtant aucune mer n'y a jamais coulé.",
+};
+
+const CONTES_FORGE = [
+  "La première forge tenait dans un coin d'atelier : un peu de pierre, un peu de fer, et deux lingots d'ascensium pour la réveiller.",
+  "Mon maître répétait qu'une forge se nourrit comme un animal. Plus on lui donne d'ascensium, plus elle grandit, et plus elle a faim.",
+  "Au troisième niveau, les forgerons apprirent à marier l'ascensium et la netherite. L'ascensium infusé devint vite la seule monnaie qui comptait.",
+  "L'enclume refusait d'aller plus loin sans un lingot de netherite. Les anciens disaient qu'elle devait goûter au Nether pour comprendre la suite.",
+  "Peu de forges ont atteint le cinquième niveau. Celles qui y sont parvenues portaient un nom, et on venait de loin pour les voir.",
+  "La sixième forge ne savait faire qu'une chose de plus : le Célestium. Il paraît que cela suffisait.",
+];
+
+const CONTES_OFFRANDES = [
+  "L'étoile du Nether rappelle au sanctuaire qu'on a affronté le Wither, et qu'on est revenu.",
+  "Le cœur de la mer lui apporte la patience des profondeurs.",
+  "Le bloc de charoïte prouve qu'on a gravi toutes les marches, une par une.",
+  "L'ascensium infusé paie le passage. Comme toujours.",
+];
+const CONTE_EVEIL = "Le fragment d'écho fait résonner l'autel. Le rayon monte. Quelque part, très loin, une vieille gardienne relève la tête et sourit.";
+const CONTE_ATTENTE = "Pose les offrandes sur les socles, une par une. Le sanctuaire n'est pas pressé. Moi non plus.";
+
+const CONTES_CELESTIUM = [
+  [1, "Au premier niveau, le Célestium n'est qu'une promesse. Il faut lui faire goûter chaque métal, du plus humble au plus noble, sans en sauter aucun."],
+  [5, "Au cinquième niveau, le métal apprend à se cacher : son porteur disparaît aux yeux des monstres, et la foudre lui obéit."],
+  [9, "Plus haut encore, la pioche ouvre la roche comme on écarte un rideau."],
+  [12, "Au douzième niveau, il n'y a plus rien à forger. Le porteur vole, et plus rien ne l'atteint. On ne revient jamais tout à fait le même d'un tel voyage."],
+];
+
+for (const [id, txt] of Object.entries(CONTES_SECTIONS)) {
+  const h = document.querySelector(`#${id} .sec-head`);
+  if (h) h.insertAdjacentHTML("afterend", conte(txt));
+}
+
+// ================= musique =================
+{
+  const audio = $("#audio"), bouton = $("#musique"), label = $("#mlabel");
+  audio.volume = 0.6;
+  bouton.onclick = () => {
+    if (audio.paused) {
+      audio.play().then(() => { bouton.classList.add("joue"); bouton.setAttribute("aria-pressed", "true"); label.textContent = "Couper la musique"; })
+        .catch(() => { label.textContent = "Lecture impossible"; });
+    } else {
+      audio.pause(); bouton.classList.remove("joue"); bouton.setAttribute("aria-pressed", "false"); label.textContent = "Écouter la légende";
+    }
+  };
+}
+
+const TIERS = [
+  { id:"bauxite", n:"Bauxite", c:"#c0663a", how:"Minerai des grottes, Y 0 à 64, commun comme le fer. Pioche en pierre.", via:"Enclume niv. 1 : pièce en fer + lingots de bauxite", armor:[2,6,5,2], tough:"0", sword:"6", pick:"6", dur:"250" },
+  { id:"cassiterite", n:"Cassitérite", c:"#8a5a36", how:"Minerai des grottes, Y −16 à 48, un peu moins commun. Pioche en pierre.", via:"Enclume niv. 1", armor:[2,6,5,3], tough:"0,5", sword:"6,5", pick:"6,5", dur:"400" },
+  { id:"galena", n:"Galène", c:"#8f959e", how:"Forge niveau 1 : bauxite + cassitérite.", via:"Enclume niv. 1", armor:[3,6,6,3], tough:"1", sword:"7", pick:"7", dur:"600" },
+  { id:"malachite", n:"Malachite", c:"#2fbf5f", how:"Forge niveau 2 : bauxite + cassitérite + galène.", via:"Enclume niv. 2", armor:[3,8,6,3], tough:"2", sword:"7,5", pick:"8", dur:"1000" },
+  { id:"cinnabar", n:"Cinabre", c:"#e0313a", how:"À reconstituer (forge niveau 3) : lingot de cinabre brisé du Nether + pyrolithe + cendrium.", via:"Enclume niv. 3", armor:[3,8,6,3], tough:"3", sword:"8", pick:"9", dur:"1600" },
+  { id:"cobaltite", n:"Cobaltite", c:"#4a76e8", how:"Forge niveau 3 : un lingot de chaque palier 1 à 5.", via:"Enclume niv. 3", armor:[4,8,7,3], tough:"4", sword:"9", pick:"10", dur:"2000" },
+  { id:"ilmenite", n:"Ilménite", c:"#8a90a0", how:"À reconstituer (forge niveau 4) : lingot d'ilménite brisé (sol des grandes grottes) + givrium + fulgurite.", via:"Enclume niv. 4", armor:[4,9,7,4], tough:"5", sword:"10", pick:"11", dur:"2500" },
+  { id:"wolframite", n:"Wolframite", c:"#ff3fa6", how:"Forge niveau 4 : un lingot de chaque palier 1 à 7.", via:"Enclume niv. 4", armor:[4,10,8,4], tough:"6", sword:"11", pick:"12", dur:"3000" },
+  { id:"platinum", n:"Platine", c:"#dfe3ea", how:"À reconstituer (forge niveau 5) : lingot de platine brisé (très profond) + soufrite + éthérite.", via:"Enclume niv. 5", armor:[5,10,8,5], tough:"7", sword:"12", pick:"13", dur:"4000" },
+  { id:"charoite", n:"Charoïte", c:"#9b5fe3", how:"Forge niveau 5 : un lingot de chaque palier 1 à 9.", via:"Enclume niv. 5", armor:[5,11,9,5], tough:"8", sword:"14", pick:"15", dur:"5000" },
+  { id:"celestium", n:"Célestium", c:"#f2c77e", how:"Forge niveau 6 : un lingot de chaque palier 1 à 10. Sort au niveau 1, monte jusqu'au 12 par fusion au sanctuaire.", via:"Enclume niv. 6", armor:[5,11,9,5], tough:"10 → 20", sword:"15 → 30", pick:"16 → instantané", dur:"incassable", celeste:true },
+];
+const PIECES = [["helmet","Casque"],["chestplate","Plastron"],["leggings","Jambières"],["boots","Bottes"]];
+const ARMOR = [null, null, "Résistance au recul", "Régénération lente hors combat", "Immunité au feu et à la lave", "Respiration sous l'eau, nage plus rapide", "Vitesse augmentée, insensible au gel", "Forte réduction des dégâts d'explosion", "Les Endermen ne s'énervent pas", "Plus de dégâts de chute, Résistance II", "Vision nocturne, Résistance jusqu'à V, invisibilité, vol (selon le niveau)"];
+const SWORD = [null, null, "Ennemis repoussés plus loin", "Vol de vie (15 %)", "Enflamme la cible", "Ralentit la cible", "Chance de foudre sur la cible (15 %)", "Chaque coup touche aussi les ennemis autour", "Ignore la moitié de l'armure ennemie", "Exécution : ennemi sous 15 % de vie tué net (sauf boss)", "Effets renforcés, éclair au clic droit, tue tout en un coup (selon le niveau)"];
+const PICK = [null, null, "S'use deux fois moins vite", "25 % de chance de doubler les minerais", "Auto-fonte : les minerais sortent en lingots", "Pleine vitesse sous l'eau", "Minage encore plus rapide", "Minage en zone 3 × 3 (accroupi : un seul bloc)", "Aimant : tout va dans l'inventaire", "Minerais proches visibles à travers les murs", "Fortune V, zones 5 × 5 et 7 × 7, filon entier, bedrock (selon le niveau)"];
+
+$("#logo").insertAdjacentHTML("afterbegin", img("i:celestium_ingot", "sm"));
+$("#loreart").innerHTML = img("i:celestial_crystal") + `<img class="alt-top" src="${T("b:celestial_altar_top_lit")}" alt="">`;
+
+// ---------- escalier + onglets ----------
+const stairs = $("#stairs"), tabs = $("#tabs");
+TIERS.forEach((t, i) => {
+  const b = document.createElement("button");
+  b.className = "step" + (t.celeste ? " brille" : "");
+  b.style.setProperty("--img", `url(${T("b:" + t.id + "_block")})`);
+  b.style.setProperty("--n", i + 1);
+  b.type = "button"; b.setAttribute("aria-label", "Palier " + (i+1) + " : " + t.n);
+  b.innerHTML = "<span>" + (i+1) + "</span>";
+  b.onclick = () => { select(i); $("#tabs").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); };
+  stairs.append(b);
+
+  const tb = document.createElement("button");
+  tb.type = "button"; tb.setAttribute("role", "tab");
+  tb.innerHTML = img("i:" + t.id + "_ingot", "sm") + esc(t.n);
+  tb.onclick = () => select(i);
+  tabs.append(tb);
+});
+
+// Taille des blocs de l'escalier : un nombre entier de pixels, pour que tout tombe juste
+function tailleEscalier() {
+  const W = stairs.parentElement.clientWidth;
+  const k = W < 600 ? 2 : 3, ecart = W < 600 ? 3 : 6;
+  const b = Math.max(6, Math.floor((W - 10 * ecart) / (11 * k)));
+  stairs.style.setProperty("--k", k);
+  stairs.style.setProperty("--b", b + "px");
+}
+tailleEscalier();
+addEventListener("resize", tailleEscalier);
+
+function list(arr, i) {
+  const items = [];
+  for (let k = 0; k <= i; k++) if (arr[k]) items.push(`<li class="${k === i ? "new" : ""}">${esc(arr[k])}</li>`);
+  return items.length ? items.join("") : `<li class="none">Aucun effet</li>`;
+}
+
+let palierActuel = 0;
+function select(i) {
+  palierActuel = i;
+  const t = TIERS[i];
+  document.documentElement.style.setProperty("--tier", t.c);
+  [...stairs.children].forEach((b, k) => b.setAttribute("aria-pressed", k === i));
+  [...tabs.children].forEach((b, k) => b.setAttribute("aria-selected", k === i));
+  const total = t.armor.reduce((a, b) => a + b, 0);
+  $("#tier").innerHTML = `
+    <div class="tier-top">
+      ${slot("i:" + t.id + "_ingot", "big")}${slot("b:" + t.id + "_block", "big")}
+      <div class="name"><p class="eyebrow">Palier ${i+1}</p><h3>${esc(t.n)}</h3></div>
+      <span class="tag">${esc(t.via)}</span>
+    </div>
+    <div class="obtain"><p class="eyebrow">Comment l'obtenir</p><p>${esc(t.how)}</p></div>
+    ${conte(CONTES_PALIERS[i], true)}
+    <div class="gear">
+      ${PIECES.map((p, k) => `<div class="piece">${slot("i:" + t.id + "_" + p[0])}<span>${p[1]}<b>${t.armor[k]} pts</b></span></div>`).join("")}
+      <button class="piece outil" type="button" data-outil="epee" aria-expanded="false">${slot("i:" + t.id + "_sword")}<span>Épée<b>${esc(t.sword)} dégâts</b></span><i class="astuce">✦ Ursula</i></button>
+      <button class="piece outil" type="button" data-outil="pioche" aria-expanded="false">${slot("i:" + t.id + "_pickaxe")}<span>Pioche<b>vitesse ${esc(t.pick.split(" ")[0])}</b></span><i class="astuce">✦ Ursula</i></button>
+    </div>
+    <div id="outilconte"></div>
+    <div class="stats">
+      <div class="stat"><small>Armure totale</small><b>${total} / 30</b></div>
+      <div class="stat"><small>Robustesse par pièce</small><b>${esc(t.tough)}</b></div>
+      <div class="stat"><small>Durabilité des outils</small><b>${esc(t.dur)}</b></div>
+    </div>
+    <div class="effects">
+      <div><div class="head">${slot("i:" + t.id + "_chestplate", "sm")}<p class="eyebrow">Armure (set complet)</p></div><ul>${list(ARMOR, i)}</ul></div>
+      <div><div class="head">${slot("i:" + t.id + "_sword", "sm")}<p class="eyebrow">Épée</p></div><ul>${list(SWORD, i)}</ul></div>
+      <div><div class="head">${slot("i:" + t.id + "_pickaxe", "sm")}<p class="eyebrow">Pioche</p></div><ul>${list(PICK, i)}</ul></div>
+    </div>
+    <p class="note">Le carré coloré marque l'effet gagné à ce palier ; les autres viennent des paliers d'avant.${t.celeste ? ' Détail par niveau dans la section <a href="#celestium">Célestium</a>.' : ""}</p>`;
+}
+$("#tier").addEventListener("click", e => {
+  const b = e.target.closest(".outil"); if (!b) return;
+  const ouvert = b.getAttribute("aria-expanded") === "true";
+  document.querySelectorAll("#tier .outil").forEach(x => x.setAttribute("aria-expanded", "false"));
+  const zone = $("#outilconte");
+  if (ouvert) { zone.innerHTML = ""; return; }
+  b.setAttribute("aria-expanded", "true");
+  const liste = b.dataset.outil === "epee" ? CONTES_EPEES : CONTES_PIOCHES;
+  zone.innerHTML = conte(liste[palierActuel], true);
+});
+select(0);
+
+// ---------- minerais ----------
+const ORES = [
+  ["Bauxite","b:bauxite_ore","i:raw_bauxite","Monde normal","Y 0 à 64","Commun","Pierre"],
+  ["Cassitérite","b:cassiterite_ore","i:raw_cassiterite","Monde normal","Y −16 à 48","Commun","Pierre"],
+  ["Ascensium","b:ascensium_ore","i:ascensium_nugget","Monde normal","Y −64 à 16","Rare, comme le diamant","Fer"],
+  ["Cinabre","b:cinnabar_ore","i:broken_cinnabar_ingot","Nether","Y 10 à 60","Peu commun","Malachite"],
+  ["Pyrolithe","b:pyrolite_ore","i:pyrolite","Nether, près des lacs de lave","Y 25 à 40","Peu commun","Malachite"],
+  ["Cendrium","b:basalt_cendrium_ore","i:cendrium","Nether, deltas de basalte","Toutes hauteurs","Peu commun","Malachite"],
+  ["Ilménite","b:deepslate_ilmenite_ore","i:broken_ilmenite_ingot","Sol des grandes grottes","Y −40 à 0","Rare","Cobaltite"],
+  ["Givrium","b:givrium_ore","i:givrium","Sous la surface des biomes enneigés","2 à 8 blocs sous la neige","Assez rare","Cobaltite"],
+  ["Fulgurite","b:fulgurite_ore","i:fulgurite","Sable frappé par la foudre (désert, mesa)","Surface","Très rare","Cobaltite"],
+  ["Platine","b:deepslate_platinum_ore","i:broken_platinum_ingot","Monde normal, très profond","Y −64 à −32","Très rare","Wolframite"],
+  ["Soufrite","b:soul_soil_soufrite_ore","i:soufrite","Nether, vallées des âmes","Toutes hauteurs","Rare","Wolframite"],
+  ["Éthérite","b:etherite_ore","i:etherite","End, îles extérieures","Dans la pierre de l'End","Très rare","Wolframite"],
+];
+$("#ores").innerHTML = ORES.map(o => `<div class="ore" role="button" tabindex="0" aria-expanded="false" data-nom="${esc(o[0])}">
+  <div class="icons">${slot(o[1])}<span>→</span>${slot(o[2])}</div>
+  <div><h3>${esc(o[0])}</h3><dl><dt>Où</dt><dd>${esc(o[3])}</dd><dt>Hauteur</dt><dd>${esc(o[4])}</dd><dt>Rareté</dt><dd>${esc(o[5])}</dd><dt>Pioche</dt><dd>${esc(o[6])} ou mieux</dd></dl>
+  <p class="astuce">✦ Clique : Ursula raconte</p></div>
+</div>`).join("");
+function basculerMinerai(carte) {
+  const ouvert = carte.getAttribute("aria-expanded") === "true";
+  carte.setAttribute("aria-expanded", String(!ouvert));
+  const ancien = carte.querySelector(".conte");
+  if (ancien) ancien.remove();
+  if (!ouvert) carte.insertAdjacentHTML("beforeend", conte(CONTES_MINERAIS[carte.dataset.nom], true));
+}
+$("#ores").addEventListener("click", e => { const c = e.target.closest(".ore"); if (c) basculerMinerai(c); });
+$("#ores").addEventListener("keydown", e => {
+  const c = e.target.closest(".ore");
+  if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); basculerMinerai(c); }
+});
+
+const RECIPES = [
+  ["Cinabre", "Forge niveau 3", [["i:broken_cinnabar_ingot","Cinabre brisé"],["i:pyrolite","Pyrolithe"],["i:cendrium","Cendrium"]], "i:cinnabar_ingot"],
+  ["Ilménite", "Forge niveau 4", [["i:broken_ilmenite_ingot","Ilménite brisée"],["i:givrium","Givrium"],["i:fulgurite","Fulgurite"]], "i:ilmenite_ingot"],
+  ["Platine", "Forge niveau 5", [["i:broken_platinum_ingot","Platine brisé"],["i:soufrite","Soufrite"],["i:etherite","Éthérite"]], "i:platinum_ingot"],
+];
+$("#recipes").innerHTML = RECIPES.map(r => `<div class="recipe"><p class="eyebrow">${esc(r[1])}</p><h3>${esc(r[0])}</h3>
+  <div class="eq">${r[2].map(x => slot(x[0])).join("+")}=${slot(r[3])}</div>
+  <p class="note">${r[2].map(x => esc(x[1])).join(" + ")}</p></div>`).join("");
+
+// ---------- forge ----------
+const LEVELS = [
+  ["rien de plus, c'est la fabrication de la table (voir la recette au-dessus)", [["i:galena_ingot","Galène"]], "Niveaux 1 à 3 : l'enclume suit la forge toute seule."],
+  ["3 lingots d'ascensium + 1 galène", [["i:malachite_ingot","Malachite"]], "Enclume niveau 2 débloquée en même temps."],
+  ["5 lingots d'ascensium + 1 malachite", [["i:cinnabar_ingot","Cinabre"],["i:cobaltite_ingot","Cobaltite"],["i:infused_ascensium","Ascensium infusé"]], "Enclume niveau 3 débloquée en même temps."],
+  ["2 ascensiums infusés + 1 cobaltite", [["i:ilmenite_ingot","Ilménite"],["i:wolframite_ingot","Wolframite"]], "Enclume niveau 4 : en plus, 1 lingot de netherite."],
+  ["4 ascensiums infusés + 1 wolframite", [["i:platinum_ingot","Platine"],["i:charoite_ingot","Charoïte"]], "Enclume niveau 5 : en plus, 1 lingot de netherite."],
+  ["8 ascensiums infusés + 1 charoïte", [["i:celestium_ingot","Célestium"],["i:ascension_compass_00","Boussole d'Ascension"]], "Enclume niveau 6 : en plus, 1 lingot de netherite. Boussole d'Ascension = boussole + charoïte + ascensium infusé (recette détaillée dans la section Sanctuaire)."],
+];
+{
+  const A = "i:ascensium_ingot", F = "v:iron_ingot", P = "c:cobblestone";
+  const grille = [A, F, A, P, F, P, P, P, P];
+  $("#craft").innerHTML = `
+    <div><p class="eyebrow">À l'établi de Minecraft</p><h3>Fabriquer la Forge et Enclume d'Ascension</h3></div>
+    <div class="craft">
+      <div class="grid3">${grille.map(k => slot(k)).join("")}</div>
+      <span class="arrow">→</span>
+      <div class="result">${slot("b:ascension_forge_side")}</div>
+    </div>
+    <div class="legend">${chip(A, "2 lingots d'ascensium")}${chip(F, "2 lingots de fer")}${chip(P, "5 pierres (roche, pierre ou ardoise des abîmes)")}</div>
+    <p class="note">La table posée est directement au niveau 1. On la monte ensuite niveau par niveau avec le bouton de la forge, en payant le coût ci-dessous.</p>`;
+}
+const lv = $("#levels");
+LEVELS.forEach((l, i) => {
+  const b = document.createElement("button"); b.type = "button";
+  b.innerHTML = `<b>${i+1}</b><span class="row">${l[1].map(x => img(x[0])).join("")}</span>`;
+  b.setAttribute("aria-label", "Niveau " + (i+1) + " : " + l[1].map(x => x[1]).join(", "));
+  b.onclick = () => forge(i); lv.append(b);
+});
+function forge(i) {
+  [...lv.children].forEach((b, k) => b.setAttribute("aria-pressed", k === i));
+  const l = LEVELS[i];
+  const unlocked = LEVELS.slice(0, i + 1).flatMap(x => x[1]);
+  $("#forge-detail").innerHTML = `
+    <div class="head">${slot("b:ascension_forge_side")}<div><p class="eyebrow">Niveau ${i+1} sur 6</p><h3>${esc(l[1].map(x => x[1]).join(", "))}</h3></div></div>
+    <div class="flame" style="--w:${(i+1)/6*100}%"></div>
+    <p><strong>Coût :</strong> ${esc(l[0])}</p>
+    <div><p class="eyebrow">Tout ce qui est disponible à ce niveau</p></div>
+    <div class="unlocked">${unlocked.map(x => chip(x[0], x[1])).join("")}</div>
+    <div class="anvil"><strong>Enclume.</strong> ${esc(l[2])}</div>
+    ${conte(CONTES_FORGE[i], true)}`;
+}
+forge(0);
+$("#extras").innerHTML = `
+  <div class="recipe"><div class="eq">${slot("i:ascensium_nugget")}× 9 =${slot("i:ascensium_ingot")}</div><h3>L'ascensium</h3><p class="note">Pépites aussi rares que le diamant, entre Y −64 et 16. Neuf pépites font un lingot.</p></div>
+  <div class="recipe"><div class="eq">${slot("i:ascensium_ingot")}+${slot("v:netherite_ingot")}=${slot("i:infused_ascensium")}</div><h3>Ascensium infusé</h3><p class="note">À la forge à partir du niveau 3. Sert à monter la forge aux niveaux 4 à 6.</p></div>
+  <div class="recipe"><div class="eq">${slot("v:iron_chestplate")}+${slot("i:bauxite_ingot")}=${slot("i:bauxite_chestplate")}</div><h3>Faire évoluer une pièce</h3><p class="note">À l'enclume, autant de lingots que pour la fabriquer : casque 5, plastron 8, jambières 7, bottes 4, épée 2, pioche 3. Les enchantements sont gardés.</p></div>`;
+
+// ---------- sanctuaire ----------
+const OFFERS = [["v:nether_star","Étoile du Nether", 15, 15], ["v:heart_of_the_sea","Cœur de la mer", 95, 15], ["b:charoite_block","Bloc de charoïte", 15, 95], ["i:infused_ascensium","4 ascensiums infusés", 95, 95]];
+const plan = $("#plan"), offers = $("#offers");
+plan.style.setProperty("--stone", `url(${T("b:celestial_stone")})`);
+$("#crystal").src = T("i:celestial_crystal");
+const filled = [false, false, false, false];
+let awake = false;
+// colonnes (vues du dessus) sous les socles, et briques dorées en bordure
+OFFERS.forEach((o, i) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "ped";
+  b.style.left = `${(o[2] - 5) / 110 * 100}%`; b.style.top = `${(o[3] - 5) / 110 * 100}%`;
+  b.setAttribute("aria-label", "Socle " + (i+1) + " : " + o[1]);
+  b.onclick = () => { if (!awake && !filled[i]) { filled[i] = true; draw(); $("#sconte").innerHTML = conte(CONTES_OFFRANDES[i], true); } };
+  plan.insertBefore(b, plan.querySelector("svg"));
+  const li = document.createElement("li"); li.innerHTML = `${slot(o[0], "sm")}Socle ${i+1} : ${esc(o[1])}`; offers.append(li);
+});
+const alt = document.createElement("button"); alt.type = "button"; alt.className = "alt";
+alt.setAttribute("aria-label", "Autel : fragment d'écho");
+alt.onclick = () => { if (filled.every(Boolean)) { if (!awake) { awake = true; draw(); $("#sconte").innerHTML = conte(CONTE_EVEIL, true); } } else { $("#sstatus").textContent = "L'autel attend d'abord les 4 offrandes"; } };
+plan.insertBefore(alt, plan.querySelector("svg"));
+const liA = document.createElement("li"); liA.innerHTML = `${slot("v:echo_shard", "sm")}Autel : 1 fragment d'écho, une fois les 4 socles remplis`; offers.append(liA);
+function draw() {
+  const n = filled.filter(Boolean).length;
+  [...plan.querySelectorAll(".ped")].forEach((b, i) => {
+    b.classList.toggle("on", filled[i]);
+    b.style.setProperty("--img", `url(${T(filled[i] ? "b:celestial_pedestal_top_lit" : "b:celestial_pedestal_top")})`);
+  });
+  alt.style.setProperty("--img", `url(${T(awake ? "b:celestial_altar_top_lit" : "b:celestial_altar_top")})`);
+  [...offers.children].forEach((li, i) => li.classList.toggle("on", i < 4 ? filled[i] : awake));
+  alt.classList.toggle("on", awake); plan.classList.toggle("awake", awake);
+  const s = $("#sstatus");
+  s.classList.toggle("awake", awake);
+  s.textContent = awake ? "✦ Éveillé : rayon vers le ciel, cristal doré, fusion possible" : `Endormi · ${n} / 4 socles`;
+}
+$("#reset").onclick = () => { filled.fill(false); awake = false; draw(); $("#sconte").innerHTML = conte(CONTE_ATTENTE); };
+$("#sconte").innerHTML = conte(CONTE_ATTENTE);
+draw();
+$("#sblocks").innerHTML = [["b:celestial_stone","Pierre céleste"],["b:golden_bricks","Briques dorées"],["b:celestial_pillar","Colonne céleste"],["b:celestial_pedestal_side","Socle"],["b:celestial_altar_side","Autel"],["i:ascension_compass_00","Boussole"]]
+  .map(b => `<figure>${slot(b[0])}<figcaption>${esc(b[1])}</figcaption></figure>`).join("") +
+  `<div class="recipe" style="width:100%"><p class="eyebrow">Forge d'Ascension · niveau 6 (pas l'établi)</p><h3>Fabriquer la boussole d'Ascension</h3>
+    <div class="eq">${slot("v:compass_16")}+${slot("i:charoite_ingot")}+${slot("i:infused_ascensium")}=${slot("i:ascension_compass_00")}</div>
+    <div class="legend">${chip("v:compass_16", "1 boussole")}${chip("i:charoite_ingot", "1 lingot de charoïte")}${chip("i:infused_ascensium", "1 ascensium infusé")}</div>
+    <p class="note">Clic droit avec la boussole en main : elle cherche le sanctuaire le plus proche, puis son aiguille pointe vers lui.</p></div>`;
+
+// ---------- célestium ----------
+const ORDRE = ["bauxite","cassiterite","galena","malachite","cinnabar","cobaltite","ilmenite","wolframite","platinum","charoite","celestium"];
+const CPIECES = [["sword","Épée"],["pickaxe","Pioche"],["helmet","Casque"],["chestplate","Plastron"],["leggings","Jambières"],["boots","Bottes"]];
+let cpiece = 0;
+const cpick = $("#cpick");
+CPIECES.forEach((p, i) => {
+  const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", p[1] + " en Célestium");
+  b.innerHTML = slot("i:celestium_" + p[0]); b.onclick = () => { cpiece = i; celeste(+slider.value); }; cpick.append(b);
+});
+const POWERS = [
+  [1, "Armure", "i:celestium_helmet", "Résistance II", "Jamais moins que la charoïte. Monte à III au niveau 7, IV au 10, V au 12."],
+  [5, "Armure", "i:celestium_chestplate", "Invisibilité totale", "Touche V : corps, armure, objets en main et nom cachés. Les monstres t'ignorent tant que tu ne les frappes pas."],
+  [5, "Épée", "i:celestium_sword", "Éclair au clic droit", "Tombe là où tu vises, jusqu'à 40 blocs. Touche les ennemis autour de l'impact."],
+  [5, "Pioche", "i:celestium_pickaxe", "Fortune V + zone 5 × 5", "Le Fortune s'ajoute au doublement des minerais."],
+  [9, "Pioche", "i:celestium_pickaxe", "Zone 7 × 7", "Accroupi, on mine toujours un seul bloc."],
+  [12, "Armure", "i:celestium_boots", "Résistance V + vol", "Invincible, et on vole comme en créatif."],
+  [12, "Épée", "i:celestium_sword", "Tout meurt en un coup", "Boss compris. L'éclair du clic droit tue aussi."],
+  [12, "Pioche", "i:celestium_pickaxe", "Filon entier + bedrock", "Un seul coup vide le filon (64 blocs max) et casse la bedrock."],
+];
+const ticks = $("#ticks");
+for (let k = 1; k <= 12; k++) { const s = document.createElement("span"); s.textContent = k; ticks.append(s); }
+const powersEl = $("#powers");
+POWERS.forEach(p => { const d = document.createElement("div"); d.className = "power";
+  d.innerHTML = `${slot(p[2], "sm")}<small>${p[1]} · niveau ${p[0]}</small><b>${esc(p[3])}</b><p>${esc(p[4])}</p>`; powersEl.append(d); });
+
+function lerp(a, b, n) { return a + (b - a) * (n - 1) / 11; }
+function fmt(x) { return (Math.round(x * 10) / 10).toString().replace(".", ","); }
+const slider = $("#lvl");
+function celeste(n) {
+  const p = CPIECES[cpiece];
+  [...cpick.children].forEach((b, k) => b.setAttribute("aria-pressed", k === cpiece));
+  $("#lvlnum").textContent = n;
+  [...ticks.children].forEach((s, k) => s.classList.toggle("hit", k + 1 <= n));
+  if (n >= 12) {
+    $("#fusion").innerHTML = `${slot("i:celestium_" + p[0])}<strong>${esc(p[1])} au niveau maximum.</strong>`;
+  } else {
+    const mat = ORDRE[n - 1], name = n === 11 ? "Célestium (une 2e)" : TIERS[n - 1].n;
+    $("#fusion").innerHTML = `<span class="hands">${slot("i:celestium_" + p[0])}+${slot("i:" + mat + "_" + p[0])}</span>
+      <span>Main droite : ${esc(p[1].toLowerCase())} en Célestium. Main gauche : ${esc(p[1].toLowerCase())} en ${esc(name)}. Clic droit sur l'autel → niveau ${n + 1}.</span>`;
+  }
+  const res = n >= 12 ? 5 : n >= 10 ? 4 : n >= 7 ? 3 : 2;
+  const zone = n >= 9 ? 7 : n >= 5 ? 5 : 3;
+  const rows = [
+    ["Dégâts de l'épée", lerp(15, 30, n), 30, fmt(lerp(15, 30, n))],
+    ["Robustesse par pièce", lerp(10, 20, n), 20, fmt(lerp(10, 20, n))],
+    ["Vitesse de minage", n >= 12 ? 60 : 16 + 4 * (n - 1), 60, n >= 12 ? "instant" : String(16 + 4 * (n - 1))],
+    ["Résistance", res, 5, ["", "I", "II", "III", "IV", "V"][res]],
+    ["Vol de vie", lerp(15, 40, n), 40, fmt(lerp(15, 40, n)) + " %"],
+    ["Chance de foudre", lerp(15, 50, n), 50, fmt(lerp(15, 50, n)) + " %"],
+    ["Seuil d'exécution", lerp(15, 40, n), 40, fmt(lerp(15, 40, n)) + " %"],
+    ["Zone de minage", zone, 7, zone + " × " + zone],
+  ];
+  $("#bars").innerHTML = rows.map(r => `<div class="bar"><span>${r[0]}</span><div class="track"><div class="fill" style="width:${Math.min(100, r[1] / r[2] * 100)}%"></div></div><b>${r[3]}</b></div>`).join("");
+  [...powersEl.children].forEach((d, k) => d.classList.toggle("on", n >= POWERS[k][0]));
+  const souvenir = CONTES_CELESTIUM.filter(c => n >= c[0]).pop();
+  const cc = $("#cconte");
+  if (cc.dataset.palier !== String(souvenir[0])) { cc.dataset.palier = souvenir[0]; cc.innerHTML = conte(souvenir[1], true); }
+}
+slider.oninput = () => celeste(+slider.value);
+celeste(+slider.value);
+
+// ---------- commandes ----------
+const CMDS = [
+  ["i:celestium_sword", "Épée en Célestium niveau 12", "/give @s ascension:celestium_sword[ascension:niveau_celestium=12]"],
+  ["i:celestium_pickaxe", "Pioche en Célestium niveau 12", "/give @s ascension:celestium_pickaxe[ascension:niveau_celestium=12]"],
+  ["i:celestium_helmet", "Casque en Célestium niveau 12", "/give @s ascension:celestium_helmet[ascension:niveau_celestium=12]"],
+  ["i:celestium_chestplate", "Plastron en Célestium niveau 12", "/give @s ascension:celestium_chestplate[ascension:niveau_celestium=12]"],
+  ["i:celestium_leggings", "Jambières en Célestium niveau 12", "/give @s ascension:celestium_leggings[ascension:niveau_celestium=12]"],
+  ["i:celestium_boots", "Bottes en Célestium niveau 12", "/give @s ascension:celestium_boots[ascension:niveau_celestium=12]"],
+  ["i:ascension_compass_00", "Se donner la boussole d'Ascension", "/give @s ascension:ascension_compass"],
+  ["i:ascension_compass_00", "Trouver le sanctuaire le plus proche", "/locate structure ascension:sanctuaire"],
+];
+$("#cmds").innerHTML = CMDS.map((c, i) => `<div class="cmd">${slot(c[0], "sm")}<span class="lbl">${esc(c[1])}</span><code id="cmd${i}">${esc(c[2])}</code><button class="btn" type="button" data-i="${i}">Copier</button></div>`).join("");
+$("#cmds").addEventListener("click", e => {
+  const b = e.target.closest("button[data-i]"); if (!b) return;
+  const code = $("#cmd" + b.dataset.i), txt = code.textContent;
+  const done = () => { b.textContent = "Copié"; setTimeout(() => b.textContent = "Copier", 1500); };
+  try { navigator.clipboard.writeText(txt).then(done, () => selectText(code)); } catch (_) { selectText(code); }
+});
+function selectText(el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+</script>
+
+</body>
+</html>
